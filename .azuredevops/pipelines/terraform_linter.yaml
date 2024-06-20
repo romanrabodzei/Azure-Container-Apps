@@ -1,0 +1,65 @@
+# .Synopsis
+#     Terraform linter pipeline
+#
+# .NOTES
+#     Author     : Roman Rabodzei
+#     Version    : 1.0.240616
+#
+#             _
+#         .__(.)<  (MEOW)
+#          \___)
+#  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+name: "Terraform_Linter_pipeline"
+
+trigger:
+  none
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+jobs:
+  - deployment: terraform_linter
+    displayName:  Terraform Linter job
+    environment: 'linter'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            # Checkout the repository to the Azure DevOps agent
+            - checkout: self
+              fetchDepth: 0
+
+            # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
+            - task: CmdLine@2
+              displayName: 'Terraform Init'
+              inputs:
+                script: |
+                  terraform init -backend=false
+                workingDirectory: '$(system.defaultWorkingDirectory)/terraform'
+                failOnStderr: true
+
+            # Run a terraform fmt for push
+            - task: CmdLine@2
+              displayName: 'Terraform Format'
+              inputs:
+                script: |
+                  terraform fmt -recursive -check
+                workingDirectory: '$(system.defaultWorkingDirectory)/terraform'
+                failOnStderr: true
+
+            # Run a terraform validate
+            # Run even if formatting fails
+            - task: CmdLine@2
+              displayName: 'Terraform Validate'
+              inputs:
+                script: |
+                  terraform validate
+                workingDirectory: '$(system.defaultWorkingDirectory)/terraform'
+                failOnStderr: true
+              condition: succeededOrFailed()

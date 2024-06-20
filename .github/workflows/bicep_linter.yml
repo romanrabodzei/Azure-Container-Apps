@@ -1,0 +1,56 @@
+# .Synopsis
+#     Bicep linter pipeline
+#
+# .NOTES
+#     Author     : Roman Rabodzei
+#     Version    : 1.0.240616
+#
+#             _
+#         .__(.)<  (MEOW)
+#          \___)
+#  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+name: Bicep Linter workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  deploymentLocation: "westeurope"
+  deploymentEnvironment: "linter"
+
+jobs:
+  bicep_linter:
+    name: Bicep Linter job
+    runs-on: ubuntu-latest
+    environment: "linter"
+    steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Run the Bicep linter on the Bicep templates to verify the syntax
+      - name: Build Bicep files
+        run: |
+          az bicep build --file ./main.bicep
+        working-directory: bicep
+
+      # Login to Azure
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Run preflight validation of the Bicep templates
+      - name: Preflight Validation
+        run: |
+          az deployment sub validate --name $GITHUB_RUN_ID --location ${{ env.deploymentLocation}} --template-file ./main.bicep --parameters deploymentEnvironment=${{ env.deploymentEnvironment}}
+        working-directory: bicep

@@ -1,0 +1,56 @@
+# .Synopsis
+#     Terraform linter pipeline
+#
+# .NOTES
+#     Author     : Roman Rabodzei
+#     Version    : 1.0.240616
+#
+#             _
+#         .__(.)<  (MEOW)
+#          \___)
+#  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+name: Terraform Linter workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  terraform_linter:
+    name: Terraform Linter job
+    runs-on: ubuntu-latest
+    environment: "linter"
+    steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init -backend=false
+        working-directory: terraform
+
+      # Run a terraform fmt for push
+      - name: Terraform Format
+        id: fmt
+        run: |
+          terraform fmt -recursive -check
+        working-directory: terraform
+
+      # Run a terraform validate
+      # Run even if formatting fails
+      - name: Terraform Validate
+        id: validate
+        if: (success() || failure())
+        run: |
+          terraform validate
+        working-directory: terraform
