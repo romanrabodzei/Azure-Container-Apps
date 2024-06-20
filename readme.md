@@ -1,0 +1,1 @@
+## Deployment the Transmission docker image to Azure Container Apps
