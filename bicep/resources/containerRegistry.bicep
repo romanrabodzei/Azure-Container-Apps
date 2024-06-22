@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240621
+    Version    : 1.0.240622
 */
 
 /// deploymentScope
@@ -18,14 +18,31 @@ param location string
 param containerRegistryName string
 
 param applicationName string
+param imageToImport string
 
 /// containerRegistrySku
-param containerRegistrySku string = 'Premium'
+@allowed([
+  'Basic'
+  'Premium'
+  'Standard'
+])
+param containerRegistrySku string = 'Standard'
 
 /// containerRegistryConfiguration
 param networkIsolation bool = true
 
 var registryPrivateDnsZoneName = 'privatelink_azurecr_io'
+var containerRegistryPremiumProperties = {
+  adminUserEnabled: true
+  networkRuleSet: {
+    defaultAction: 'Deny'
+  }
+  publicNetworkAccess: 'Disabled'
+  networkRuleBypassOptions: 'AzureServices'
+}
+var containerRegistryStandardProperties = {
+  adminUserEnabled: true
+}
 
 /// virtualNetworkParameters
 param virtualNetworkResourceGroupName string
@@ -34,6 +51,7 @@ param virtualNetworkSubnetName string
 
 /// managedIdentityParameters
 var containerRegistryACRRepositoryContributor = '2efddaa5-3f1f-4df3-97df-af3f13818f4c'
+var containerRegistryContributor = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 param userAssignedIdentityResourceGroupName string
 param userAssignedIdentityName string
 
@@ -50,7 +68,7 @@ resource containerRegistry_resource 'Microsoft.ContainerRegistry/registries@2023
   location: location
   tags: tags
   sku: {
-    name: containerRegistrySku
+    name: networkIsolation ? 'Premium' : containerRegistrySku
   }
   identity: {
     type: 'UserAssigned'
@@ -58,18 +76,11 @@ resource containerRegistry_resource 'Microsoft.ContainerRegistry/registries@2023
       '${resourceId(userAssignedIdentityResourceGroupName, 'Microsoft.ManagedIdentity/userAssignedIdentities', userAssignedIdentityName)}': {}
     }
   }
-  properties: {
-    adminUserEnabled: true
-    networkRuleSet: {
-      defaultAction: networkIsolation ? 'Deny' : 'Allow'
-    }
-    publicNetworkAccess: networkIsolation ? 'Disabled' : 'Enabled'
-    networkRuleBypassOptions: 'AzureServices'
-  }
+  properties: networkIsolation ? containerRegistryPremiumProperties : containerRegistryStandardProperties
 }
 
 resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
-  name: toLower(replace(resourceGroup().name, '-rg', 'ds-azcli'))
+  name: toLower(replace(resourceGroup().name, '-rg', '-ds-azcli'))
   location: location
   tags: tags
   identity: {
@@ -80,7 +91,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
   }
   kind: 'AzureCLI'
   properties: {
-    azCliVersion: '2.9.0'
+    azCliVersion: '2.60.0'
     environmentVariables: [
       {
         name: 'containerRegistryName'
@@ -90,16 +101,34 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
         name: 'applicationName'
         value: applicationName
       }
+      {
+        name: 'imageToImport'
+        value: imageToImport
+      }
+      {
+        name: 'containerRegistrySku'
+        value: containerRegistrySku
+      }
     ]
     scriptContent: '''
-    az acr import --name $containerRegistryName --source docker.io/hurlenko/filebrowser:latest --image $applicationName:latest
-    az acr artifact-streaming update --name $containerRegistryName --repository $applicationName --enable-streaming true
+    if [ "$containerRegistrySku" = "premium" ]; then
+      az acr update --name $containerRegistryName --public-network-enabled true
+      az acr import --name $containerRegistryName --source $imageToImport --image $applicationName:latest
+      az acr artifact-streaming update --name $containerRegistryName --repository $applicationName --enable-streaming true
+      az acr update --name $containerRegistryName --public-network-enabled false
+    else
+      az acr import --name $containerRegistryName --source $imageToImport --image $applicationName:latest
+    fi
     '''
     timeout: 'PT1H'
     retentionInterval: 'PT1H'
     cleanupPreference: 'Always'
   }
-  dependsOn: [containerRegistry_resource, containerRegistryACRRepositoryContributor_roleAssignment_resource]
+  dependsOn: [
+    containerRegistry_resource
+    containerRegistryContributor_roleAssignment_resource
+    containerRegistryACRRepositoryContributor_roleAssignment_resource
+  ]
 }
 
 resource managedIdentity_resource 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
@@ -119,6 +148,21 @@ resource containerRegistryACRRepositoryContributor_roleAssignment_resource 'Micr
     principalType: 'ServicePrincipal'
     principalId: managedIdentity_resource.properties.principalId
     roleDefinitionId: containerRegistryACRRepositoryContributor_roleDefinition_resource.id
+  }
+}
+
+resource containerRegistryContributor_roleDefinition_resource 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: containerRegistryContributor
+  scope: subscription()
+}
+
+resource containerRegistryContributor_roleAssignment_resource 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: containerRegistry_resource
+  name: guid(containerRegistryContributor_roleDefinition_resource.name, containerRegistry_resource.name)
+  properties: {
+    principalType: 'ServicePrincipal'
+    principalId: managedIdentity_resource.properties.principalId
+    roleDefinitionId: containerRegistryContributor_roleDefinition_resource.id
   }
 }
 

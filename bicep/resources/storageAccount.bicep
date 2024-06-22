@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240621
+    Version    : 1.0.240622
 */
 
 /// deploymentScope
@@ -66,22 +66,17 @@ resource storageAccount_resource 'Microsoft.Storage/storageAccounts@2023-05-01' 
       defaultAction: networkIsolation ? 'Deny' : 'Allow'
     }
   }
-}
-
-resource storageAccountFileService_resource 'Microsoft.Storage/storageAccounts/fileServices@2023-01-01' = {
-  name: toLower('${storageAccountName}/default')
-  properties: {}
-  dependsOn: [
-    storageAccount_resource
-  ]
-}
-
-resource storageAccountFileShare_resource 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-01-01' = {
-  name: toLower('${storageAccountName}/default/${fileShareName}')
-  properties: {
-    accessTier:'Hot'
-    enabledProtocols: 'SMB'
-    shareQuota: 1024
+  resource fileshare 'fileServices' = {
+    name: 'default'
+    properties: {}
+    resource default 'shares' = {
+      name: fileShareName
+      properties: {
+        accessTier: 'Hot'
+        enabledProtocols: 'SMB'
+        shareQuota: 1024
+      }
+    }
   }
 }
 

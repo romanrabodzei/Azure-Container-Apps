@@ -27,32 +27,33 @@ param deploymentDate string = utcNow('yyyyMMddHHmm')
 
 /// container apps
 @description('Name of the resource group for the Azure Container Apps components.')
-param containerAppsResourceGroupName string = 'az-${deploymentEnvironment}-ca-rg'
+param containerAppsResourceGroupName string = 'az-${deploymentEnvironment}-capp-rg'
 @description('Name of the Log Analytics workspace.')
-param logAnalyticsWorkspaceName string = 'az-${deploymentEnvironment}-ca-law'
+param logAnalyticsWorkspaceName string = 'az-${deploymentEnvironment}-capp-law'
 param logAnalyticsWorkspaceRetentionInDays int = 30
 @description('Daily quota for the Log Analytics workspace in GB. -1 means that there is no cap on the data ingestion.')
 param logAnalyticsWorkspaceDailyQuotaGb int = -1
 @description('Name of the user-assigned managed identity.')
-param userAssignedIdentityName string = 'az-${deploymentEnvironment}-ca-mi'
+param userAssignedIdentityName string = 'az-${deploymentEnvironment}-capp-mi'
 @description('Name of the storage account.')
-param storageAccountName string = 'az${deploymentEnvironment}castg'
+param storageAccountName string = 'az${deploymentEnvironment}cappstg'
 @description('Name of the Azure Container Registry.')
-param containerRegistryName string = 'az${deploymentEnvironment}caacr'
+param containerRegistryName string = 'az${deploymentEnvironment}cappacr'
 @description('Name of the application, used for the deployment.')
+param imageToImport string = 'docker.io/hurlenko/filebrowser:latest'
 param applicationName string = 'filebrowser'
 param applicationPort int = 8080
 @description('Name of the Azure Container Apps.')
-param containerAppsName string = 'az-${deploymentEnvironment}-ca'
+param containerAppsName string = 'az-${deploymentEnvironment}-capp'
 @description('Name of the Azure Container Apps managed environment.')
-param containerAppsManagedEnvironmentName string = 'az-${deploymentEnvironment}-ca-env'
+param containerAppsManagedEnvironmentName string = 'az-${deploymentEnvironment}-capp-env'
 
 /// virtual network
 var virtualNetworkAddressPrefix = '10.0.0.0/22'
-var privateEndpointSubnetName = replace(containerAppsResourceGroupName, 'ca-rg', 'pe-subnet')
+var privateEndpointSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'pe-subnet')
 var privateEndpointSubnetAddressPrefix = [for i in range(0, 4): cidrSubnet(virtualNetworkAddressPrefix, 24, i)]
 var privateEndpointSecurityGroupName = '${privateEndpointSubnetName}-nsg'
-var containerAppsSubnetName = replace(containerAppsResourceGroupName, 'ca-rg', 'ca-subnet')
+var containerAppsSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'capp-subnet')
 var containerAppsSubnetAddressPrefix = [for i in range(0, 2): cidrSubnet(virtualNetworkAddressPrefix, 23, i)]
 var containerAppsSecurityGroupName = '${containerAppsSubnetName}-nsg'
 
@@ -153,6 +154,7 @@ module containerRegistry_module './resources/containerRegistry.bicep' = {
     location: deploymentLocation
     containerRegistryName: containerRegistryName
     applicationName: applicationName
+    imageToImport: imageToImport
     networkIsolation: networkIsolation
     virtualNetworkResourceGroupName: containerAppsResourceGroupName
     virtualNetworkName: replace(containerAppsResourceGroupName, '-rg', '-vnet')
