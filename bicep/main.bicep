@@ -20,7 +20,7 @@ targetScope = 'subscription'
 @description('The location where the resources will be deployed.')
 param deploymentLocation string = deployment().location
 @description('The environment where the resources will be deployed.')
-@maxLength(5)
+@maxLength(6)
 param deploymentEnvironment string = 'demo'
 @description('The UTC date and time when the deployment is executed.')
 param deploymentDate string = utcNow('yyyyMMddHHmm')
