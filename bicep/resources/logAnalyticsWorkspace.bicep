@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240621
+    Version    : 1.0.240622
 */
 
 /// deploymentScope
@@ -45,3 +45,6 @@ resource logAnalyticsWorkspace_resource 'Microsoft.OperationalInsights/workspace
     }
   }
 }
+
+/// output
+output logAnalyticsWorkspaceId string = logAnalyticsWorkspace_resource.id

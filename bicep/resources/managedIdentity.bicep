@@ -1,25 +1,22 @@
 /*
 .Synopsis
-    Bicep template for User-Assigned Identities. 
+    Bicep template for User-Assigned Identities.
     Template:
       - https://docs.microsoft.com/en-us/azure/templates/Microsoft.ManagedIdentity/userAssignedIdentities?tabs=bicep#template-format
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240621
+    Version    : 1.0.240622
 */
 
 /// deploymentScope
 targetScope = 'resourceGroup'
 
-/// userAssignedIdentityParameters
+/// parameters
 param location string
 
 param userAssignedIdentityName string
-var userAssignedIdentitiesId = resourceId(
-  'Microsoft.ManagedIdentity/userAssignedIdentities',
-  userAssignedIdentityName
-)
+var userAssignedIdentitiesId = resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', userAssignedIdentityName)
 
 /// tags
 param tags object = {}

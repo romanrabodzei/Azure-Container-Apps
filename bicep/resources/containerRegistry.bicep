@@ -12,15 +12,10 @@
 /// deploymentScope
 targetScope = 'resourceGroup'
 
-/// containerRegistryParameters
+/// parameters
 param location string
 
 param containerRegistryName string
-
-param applicationName string
-param imageToImport string
-
-/// containerRegistrySku
 @allowed([
   'Basic'
   'Premium'
@@ -28,9 +23,14 @@ param imageToImport string
 ])
 param containerRegistrySku string = 'Standard'
 
-/// containerRegistryConfiguration
-param networkIsolation bool = true
+param applicationName string
+param applicationImageToImport string
 
+/// virtualNetworkParameters
+param networkIsolation bool = true
+param virtualNetworkResourceGroupName string
+param virtualNetworkName string
+param virtualNetworkSubnetName string
 var registryPrivateDnsZoneName = 'privatelink_azurecr_io'
 var containerRegistryPremiumProperties = {
   adminUserEnabled: true
@@ -44,20 +44,13 @@ var containerRegistryStandardProperties = {
   adminUserEnabled: true
 }
 
-/// virtualNetworkParameters
-param virtualNetworkResourceGroupName string
-param virtualNetworkName string
-param virtualNetworkSubnetName string
-
 /// managedIdentityParameters
-var containerRegistryACRRepositoryContributor = '2efddaa5-3f1f-4df3-97df-af3f13818f4c'
-var containerRegistryContributor = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 param userAssignedIdentityResourceGroupName string
 param userAssignedIdentityName string
 
-/// containerRegistryMonitoring
-param logAnalyticsWorkspaceName string = ''
+/// logAnalyticsWorkspaceParameters
 param logAnalyticsWorkspaceResourceGroupName string = ''
+param logAnalyticsWorkspaceName string = ''
 
 /// tags
 param tags object = {}
@@ -102,8 +95,8 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
         value: applicationName
       }
       {
-        name: 'imageToImport'
-        value: imageToImport
+        name: 'applicationImageToImport'
+        value: applicationImageToImport
       }
       {
         name: 'containerRegistrySku'
@@ -113,11 +106,11 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
     scriptContent: '''
     if [ "$containerRegistrySku" = "premium" ]; then
       az acr update --name $containerRegistryName --public-network-enabled true
-      az acr import --name $containerRegistryName --source $imageToImport --image $applicationName:latest
+      az acr import --name $containerRegistryName --source $applicationImageToImport --image $applicationName:latest
       az acr artifact-streaming update --name $containerRegistryName --repository $applicationName --enable-streaming true
       az acr update --name $containerRegistryName --public-network-enabled false
     else
-      az acr import --name $containerRegistryName --source $imageToImport --image $applicationName:latest
+      az acr import --name $containerRegistryName --source $applicationImageToImport --image $applicationName:latest
     fi
     '''
     timeout: 'PT1H'
@@ -136,6 +129,8 @@ resource managedIdentity_resource 'Microsoft.ManagedIdentity/userAssignedIdentit
   name: userAssignedIdentityName
 }
 
+var containerRegistryACRRepositoryContributor = '2efddaa5-3f1f-4df3-97df-af3f13818f4c'
+
 resource containerRegistryACRRepositoryContributor_roleDefinition_resource 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   name: containerRegistryACRRepositoryContributor
   scope: subscription()
@@ -150,6 +145,8 @@ resource containerRegistryACRRepositoryContributor_roleAssignment_resource 'Micr
     roleDefinitionId: containerRegistryACRRepositoryContributor_roleDefinition_resource.id
   }
 }
+
+var containerRegistryContributor = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 
 resource containerRegistryContributor_roleDefinition_resource 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   name: containerRegistryContributor
@@ -216,7 +213,7 @@ resource registryPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-06-01'
   }
 }
 
-resource fileSharePrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-06-01' = if (networkIsolation) {
+resource registryPrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-06-01' = if (networkIsolation) {
   parent: registryPrivateEndpoint
   name: 'default'
   properties: {

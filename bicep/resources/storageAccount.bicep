@@ -12,29 +12,23 @@
 /// deploymentScope
 targetScope = 'resourceGroup'
 
-/// storageAccountParameters
+/// parameters
 param location string
 
 param storageAccountName string
-
-/// storageAccountConfiguration
 param storageAccountKind string = 'StorageV2'
 param storageAccountType string = 'Standard_RAGZRS'
-param networkIsolation bool = true
-
-param fileShareName string = 'fileshare'
-
-var fileSharePrivateDnsZoneName = 'privatelink_file_core_windows_net'
-var queuePrivateDnsZoneName = 'privatelink_queue_core_windows_net'
+param storageAccountFileShareName string = 'fileshare'
 
 /// virtualNetworkParameters
+param networkIsolation bool = true
 param virtualNetworkResourceGroupName string
 param virtualNetworkName string
 param virtualNetworkSubnetName string
+var fileSharePrivateDnsZoneName = 'privatelink_file_core_windows_net'
+var queuePrivateDnsZoneName = 'privatelink_queue_core_windows_net'
 
 /// managedIdentityParameters
-var StorageBlobDataContributor = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-var StorageFileDataSMBShareContributor = '0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb'
 param userAssignedIdentityResourceGroupName string
 param userAssignedIdentityName string
 
@@ -70,7 +64,7 @@ resource storageAccount_resource 'Microsoft.Storage/storageAccounts@2023-05-01' 
     name: 'default'
     properties: {}
     resource default 'shares' = {
-      name: fileShareName
+      name: storageAccountFileShareName
       properties: {
         accessTier: 'Hot'
         enabledProtocols: 'SMB'
@@ -84,6 +78,8 @@ resource managedIdentity_resource 'Microsoft.ManagedIdentity/userAssignedIdentit
   scope: resourceGroup(userAssignedIdentityResourceGroupName)
   name: userAssignedIdentityName
 }
+
+var StorageBlobDataContributor = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 
 resource storageBlobDataContributor_roleDefinition_resource 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   name: StorageBlobDataContributor
@@ -99,6 +95,8 @@ resource storageBlobDataContributor_roleAssignment_resource 'Microsoft.Authoriza
     roleDefinitionId: storageBlobDataContributor_roleDefinition_resource.id
   }
 }
+
+var StorageFileDataSMBShareContributor = '0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb'
 
 resource StorageFileDataSMBShareContributor_roleDefinition_resource 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   name: StorageFileDataSMBShareContributor

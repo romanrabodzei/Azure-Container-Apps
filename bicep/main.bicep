@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240621
+    Version    : 1.0.240622
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -19,40 +19,55 @@ targetScope = 'subscription'
 
 @description('The location where the resources will be deployed.')
 param deploymentLocation string = deployment().location
+
 @description('The environment where the resources will be deployed.')
 @maxLength(6)
 param deploymentEnvironment string = 'demo'
+
 @description('The UTC date and time when the deployment is executed.')
 param deploymentDate string = utcNow('yyyyMMddHHmm')
 
 /// container apps
 @description('Name of the resource group for the Azure Container Apps components.')
 param containerAppsResourceGroupName string = 'az-${deploymentEnvironment}-capp-rg'
+
 @description('Name of the Log Analytics workspace.')
 param logAnalyticsWorkspaceName string = 'az-${deploymentEnvironment}-capp-law'
+
+@description('Retention period for the Log Analytics workspace in days. 30 days is free.')
 param logAnalyticsWorkspaceRetentionInDays int = 30
+
 @description('Daily quota for the Log Analytics workspace in GB. -1 means that there is no cap on the data ingestion.')
 param logAnalyticsWorkspaceDailyQuotaGb int = -1
+
 @description('Name of the user-assigned managed identity.')
 param userAssignedIdentityName string = 'az-${deploymentEnvironment}-capp-mi'
+
 @description('Name of the storage account.')
 param storageAccountName string = 'az${deploymentEnvironment}cappstg'
+
 @description('Name of the Azure Container Registry.')
 param containerRegistryName string = 'az${deploymentEnvironment}cappacr'
+
 @description('Name of the application, used for the deployment.')
-param imageToImport string = 'docker.io/hurlenko/filebrowser:latest'
 param applicationName string = 'filebrowser'
+param applicationImageToImport string = 'docker.io/hurlenko/filebrowser:latest'
 param applicationPort int = 8080
+param applicationFolder string = 'data'
+
 @description('Name of the Azure Container Apps.')
 param containerAppsName string = 'az-${deploymentEnvironment}-capp'
+
 @description('Name of the Azure Container Apps managed environment.')
 param containerAppsManagedEnvironmentName string = 'az-${deploymentEnvironment}-capp-env'
 
 /// virtual network
 var virtualNetworkAddressPrefix = '10.0.0.0/22'
+
 var privateEndpointSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'pe-subnet')
 var privateEndpointSubnetAddressPrefix = [for i in range(0, 4): cidrSubnet(virtualNetworkAddressPrefix, 24, i)]
 var privateEndpointSecurityGroupName = '${privateEndpointSubnetName}-nsg'
+
 var containerAppsSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'capp-subnet')
 var containerAppsSubnetAddressPrefix = [for i in range(0, 2): cidrSubnet(virtualNetworkAddressPrefix, 23, i)]
 var containerAppsSecurityGroupName = '${containerAppsSubnetName}-nsg'
@@ -82,7 +97,6 @@ module newNetwork_module 'resources/virtualNetwork.bicep' = {
   name: toLower('virtualNetwork-${deploymentDate}')
   params: {
     location: deploymentLocation
-    virtualNetworkDeployment: true
     virtualNetworkName: replace(containerAppsResourceGroupName, '-rg', '-vnet')
     virtualNetworkAddressPrefix: virtualNetworkAddressPrefix
     virtualSubnetNames: [
@@ -154,7 +168,7 @@ module containerRegistry_module './resources/containerRegistry.bicep' = {
     location: deploymentLocation
     containerRegistryName: containerRegistryName
     applicationName: applicationName
-    imageToImport: imageToImport
+    applicationImageToImport: applicationImageToImport
     networkIsolation: networkIsolation
     virtualNetworkResourceGroupName: containerAppsResourceGroupName
     virtualNetworkName: replace(containerAppsResourceGroupName, '-rg', '-vnet')
@@ -179,6 +193,7 @@ module containerApps_module './resources/containerApps.bicep' = {
     containerAppsName: '${containerAppsName}-${applicationName}'
     containerAppsImage: '${applicationName}:latest'
     containerAppsPort: applicationPort
+    containerAppsFolder: applicationFolder
     containerAppsManagedEnvironmentName: containerAppsManagedEnvironmentName
     containerRegistryResourceGroupName: containerAppsResourceGroupName
     containerRegistryName: containerRegistryName

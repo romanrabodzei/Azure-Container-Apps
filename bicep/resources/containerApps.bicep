@@ -7,19 +7,20 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240621
+    Version    : 1.0.240622
 */
 
 /// deploymentScope
 targetScope = 'resourceGroup'
 
-/// storageAccountParameters
+/// parameters
 param location string
 
 param containerAppsManagedEnvironmentName string
 param containerAppsName string
 param containerAppsImage string
 param containerAppsPort int
+param containerAppsFolder string
 
 /// virtualNetworkParameters
 param virtualNetworkResourceGroupName string
@@ -39,13 +40,26 @@ param userAssignedIdentityResourceGroupName string
 param userAssignedIdentityName string
 
 /// logAnalyticsWorkspaceParameters
-param logAnalyticsWorkspaceName string = ''
 param logAnalyticsWorkspaceResourceGroupName string = ''
+param logAnalyticsWorkspaceName string = ''
 
 /// tags
 param tags object = {}
 
 /// resources
+resource virtualNetwork_resource 'Microsoft.Network/virtualNetworks@2023-11-01' existing = {
+  scope: resourceGroup(virtualNetworkResourceGroupName)
+  name: virtualNetworkName
+  resource subnet 'subnets' existing = {
+    name: virtualNetworkSubnetName
+  }
+}
+
+resource managedIdentity_resource 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  scope: resourceGroup(userAssignedIdentityResourceGroupName)
+  name: userAssignedIdentityName
+}
+
 resource logAnalytics_workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   scope: resourceGroup(logAnalyticsWorkspaceResourceGroupName)
   name: logAnalyticsWorkspaceName
@@ -56,17 +70,9 @@ resource storageAccount_resource 'Microsoft.Storage/storageAccounts@2023-05-01' 
   name: storageAccountName
 }
 
-resource managedIdentity_resource 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
-  scope: resourceGroup(userAssignedIdentityResourceGroupName)
-  name: userAssignedIdentityName
-}
-
-resource virtualNetwork_resource 'Microsoft.Network/virtualNetworks@2023-11-01' existing = {
-  scope: resourceGroup(virtualNetworkResourceGroupName)
-  name: virtualNetworkName
-  resource subnet 'subnets' existing = {
-    name: virtualNetworkSubnetName
-  }
+resource containerRegistry_resource 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+  scope: resourceGroup(containerRegistryResourceGroupName)
+  name: toLower(containerRegistryName)
 }
 
 resource managedEnvironment_resource 'Microsoft.App/managedEnvironments@2024-03-01' = {
@@ -120,11 +126,6 @@ resource managedEnvironment_resource 'Microsoft.App/managedEnvironments@2024-03-
   }
 }
 
-resource containerRegistry_resource 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
-  scope: resourceGroup(containerRegistryResourceGroupName)
-  name: toLower(containerRegistryName)
-}
-
 resource containerApps_resource 'Microsoft.App/containerApps@2024-03-01' = {
   name: toLower(containerAppsName)
   location: location
@@ -170,19 +171,19 @@ resource containerApps_resource 'Microsoft.App/containerApps@2024-03-01' = {
           }
           volumeMounts: [
             {
-              mountPath: '/data'
-              volumeName: 'data'
+              mountPath: '/${containerAppsFolder}'
+              volumeName: containerAppsFolder
             }
           ]
         }
       ]
       scale: {
         minReplicas: 1
-        maxReplicas: 1
+        maxReplicas: 3
       }
       volumes: [
         {
-          name: 'data'
+          name: containerAppsFolder
           storageName: storageAccount_resource.name
           storageType: 'AzureFile'
         }
