@@ -164,9 +164,6 @@ resource "azurerm_monitor_diagnostic_setting" "send_data_to_logAnalyticsWorkspac
   enabled_log {
     category_group = "allLogs"
   }
-  metric {
-    category = "AllMetrics"
-  }
 }
 
 /// output
