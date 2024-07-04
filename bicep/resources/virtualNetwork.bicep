@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240622
+    Version    : 1.0.240703
 */
 
 /// deployment scope
@@ -16,7 +16,7 @@ targetScope = 'resourceGroup'
 param location string
 
 param virtualNetworkName string
-param virtualNetworkAddressPrefix string = ''
+param virtualNetworkAddressPrefix string
 param virtualSubnetNames array
 param virtualNetworkSubnetAddressPrefixes array
 param networkSecurityGroupNames array
@@ -97,7 +97,7 @@ resource logAnalytics_resource 'Microsoft.OperationalInsights/workspaces@2022-10
   name: logAnalyticsWorkspaceName
 }
 
-resource send_data_to_logAnalyticsWorkspace 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!empty(logAnalyticsWorkspaceName) && !empty(logAnalyticsWorkspaceResourceGroupName)) {
+resource send_data_to_logAnalyticsWorkspace_virtualNetwork 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!empty(logAnalyticsWorkspaceName) && !empty(logAnalyticsWorkspaceResourceGroupName)) {
   scope: virtualNetwork_resource
   name: toLower('send-data-to-${logAnalyticsWorkspaceName}')
   properties: {
@@ -111,6 +111,23 @@ resource send_data_to_logAnalyticsWorkspace 'Microsoft.Insights/diagnosticSettin
     ]
   }
 }
+
+resource send_data_to_logAnalyticsWorkspace_networkSecurityGroup 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = [
+  for (networkSecurityGroup, i) in networkSecurityGroups: if (!empty(logAnalyticsWorkspaceName) && !empty(logAnalyticsWorkspaceResourceGroupName)) {
+    scope: networkSecurityGroup_resource[i]
+    name: toLower('send-data-to-${logAnalyticsWorkspaceName}')
+    properties: {
+      workspaceId: logAnalytics_resource.id
+      logs: []
+      metrics: [
+        {
+          category: 'AllMetrics'
+          enabled: true
+        }
+      ]
+    }
+  }
+]
 
 /// output
 output virtualNetworkId string = virtualNetwork_resource.id
