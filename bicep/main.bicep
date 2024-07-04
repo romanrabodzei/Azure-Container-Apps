@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240622
+    Version    : 1.0.240703
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -92,7 +92,7 @@ resource resourceGroup_resource 'Microsoft.Resources/resourceGroups@2024-03-01' 
   tags: tags
 }
 
-module newNetwork_module 'resources/virtualNetwork.bicep' = {
+module network_module 'resources/virtualNetwork.bicep' = {
   scope: resourceGroup(containerAppsResourceGroupName)
   name: toLower('virtualNetwork-${deploymentDate}')
   params: {
@@ -156,7 +156,7 @@ module storageAccount_module './resources/storageAccount.bicep' = {
     tags: tags
   }
   dependsOn: [
-    newNetwork_module
+    network_module
     managedIdentity_module
   ]
 }
@@ -181,7 +181,7 @@ module containerRegistry_module './resources/containerRegistry.bicep' = {
   }
   dependsOn: [
     managedIdentity_module
-    newNetwork_module
+    network_module
   ]
 }
 
@@ -210,7 +210,7 @@ module containerApps_module './resources/containerApps.bicep' = {
   }
   dependsOn: [
     managedIdentity_module
-    newNetwork_module
+    network_module
     storageAccount_module
     containerRegistry_module
   ]

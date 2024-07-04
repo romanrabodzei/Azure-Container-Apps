@@ -61,13 +61,14 @@ variable "tags" {
   default = {}
 }
 
+/// locals
 locals {
   networkSecurityGroups = [
     "containerApps",
     "privateEndpoints"
   ]
   securityRules = {
-    containerApps = {
+    containerApps = [{
       name : "AllowAnyHTTPSInbound"
       priority : 100
       protocol : "Tcp"
@@ -81,8 +82,8 @@ locals {
       destinationPortRanges : []
       sourceAddressPrefixes : []
       destinationAddressPrefixes : []
-    }
-    privateEndpoints = {}
+    }]
+    privateEndpoints = []
   }
 }
 
@@ -113,7 +114,7 @@ resource "azurerm_monitor_diagnostic_setting" "send_data_to_logAnalyticsWorkspac
   count                      = length(var.logAnalyticsWorkspaceName) > 0 && length(var.logAnalyticsWorkspaceResourceGroupName) > 0 ? 1 : 0
   name                       = lower("send-data-to-${var.logAnalyticsWorkspaceName}")
   target_resource_id         = azurerm_virtual_network.this_resource.id
-  log_analytics_workspace_id = data.azurerm_log_analytics_workspace.this_resource.id
+  log_analytics_workspace_id = data.azurerm_log_analytics_workspace.this_resource[0].id
   enabled_log {
     category_group = "allLogs"
   }
@@ -127,21 +128,38 @@ resource "azurerm_network_security_group" "this_resource" {
   name                = lower(var.networkSecurityGroupNames[count.index])
   location            = var.deploymentLocation
   resource_group_name = var.deploymentResourceGroupName
-  security_rule       = local.securityRules[local.networkSecurityGroups[count.index]]
   tags                = var.tags
+  dynamic "security_rule" {
+    for_each = toset(local.securityRules[local.networkSecurityGroups[count.index]])
+    content {
+      name                         = security_rule.value["name"]
+      priority                     = security_rule.value["priority"]
+      protocol                     = security_rule.value["protocol"]
+      source_port_range            = security_rule.value["sourcePortRange"]
+      destination_port_range       = security_rule.value["destinationPortRange"]
+      source_address_prefix        = security_rule.value["sourceAddressPrefix"]
+      destination_address_prefix   = security_rule.value["destinationAddressPrefix"]
+      access                       = security_rule.value["access"]
+      direction                    = security_rule.value["direction"]
+      source_port_ranges           = security_rule.value["sourcePortRanges"]
+      destination_port_ranges      = security_rule.value["destinationPortRanges"]
+      source_address_prefixes      = security_rule.value["sourceAddressPrefixes"]
+      destination_address_prefixes = security_rule.value["destinationAddressPrefixes"]
+    }
+  }
 }
 
 resource "azurerm_subnet_network_security_group_association" "subnet_nsg_association" {
-  for_each                  = { for i, name in var.virtualSubnetNames : name => i }
-  subnet_id                 = azurerm_subnet.subnet[lower(name)].id
-  network_security_group_id = azurerm_network_security_group.nsg[lower(var.networkSecurityGroupNames[each.value])].id
+  count                     = length(var.networkSecurityGroupNames)
+  subnet_id                 = azurerm_subnet.this_resource[count.index].id
+  network_security_group_id = azurerm_network_security_group.this_resource[count.index].id
 }
 
 resource "azurerm_monitor_diagnostic_setting" "send_data_to_logAnalyticsWorkspace_networkSecurityGroup" {
   for_each                   = { for i, networkSecurityGroup in local.networkSecurityGroups : i => networkSecurityGroup if length(var.logAnalyticsWorkspaceName) > 0 && length(var.logAnalyticsWorkspaceResourceGroupName) > 0 }
   name                       = lower("send-data-to-${var.logAnalyticsWorkspaceName}")
   target_resource_id         = each.value.id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.this_resource.id
+  log_analytics_workspace_id = data.azurerm_log_analytics_workspace.this_resource[0].id
   enabled_log {
     category_group = "allLogs"
   }

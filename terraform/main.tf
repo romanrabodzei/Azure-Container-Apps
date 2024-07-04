@@ -21,10 +21,10 @@ locals {
   containerAppsName                   = var.containerAppsName == "" ? "az-${var.deploymentEnvironment}-capp" : var.containerAppsName
   containerAppsManagedEnvironmentName = var.containerAppsManagedEnvironmentName == "" ? "az-${var.deploymentEnvironment}-capp-env" : var.containerAppsManagedEnvironmentName
   privateEndpointSubnetName           = replace(var.containerAppsResourceGroupName, "capp-rg", "pe-subnet")
-  privateEndpointSubnetAddressPrefix  = [for i in range(0, 4) : cidrsubnet(var.virtualNetworkAddressPrefix, 24, i)]
+  privateEndpointSubnetAddressPrefix  = cidrsubnet(var.virtualNetworkAddressPrefix, 2, 3)
   privateEndpointSecurityGroupName    = "${local.privateEndpointSubnetName}-nsg"
   containerAppsSubnetName             = replace(var.containerAppsResourceGroupName, "capp-rg", "capp-subnet")
-  containerAppsSubnetAddressPrefix    = [for i in range(0, 2) : cidrsubnet(var.virtualNetworkAddressPrefix, 23, i)]
+  containerAppsSubnetAddressPrefix    = cidrsubnet(var.virtualNetworkAddressPrefix, 1, 0)
   containerAppsSecurityGroupName      = "${local.containerAppsSubnetName}-nsg"
   tagValue                            = var.tagValue == "" ? var.deploymentEnvironment : var.tagValue
   tags                                = { "${var.tagKey}" : local.tagValue }
@@ -150,4 +150,17 @@ resource "azurerm_resource_group" "this_resource" {
   name     = local.containerAppsResourceGroupName
   location = var.deploymentLocation
   tags     = local.tags
+}
+
+module "Network_module" {
+  source                                 = "./resources/virtualNetwork"
+  deploymentResourceGroupName            = azurerm_resource_group.this_resource.name
+  deploymentLocation                     = var.deploymentLocation
+  virtualNetworkName                     = replace(local.containerAppsResourceGroupName, "-rg", "-vnet")
+  virtualNetworkAddressPrefix            = var.virtualNetworkAddressPrefix
+  virtualSubnetNames                     = [local.privateEndpointSubnetName, local.containerAppsSubnetName]
+  virtualNetworkSubnetAddressPrefixes    = [local.privateEndpointSubnetAddressPrefix, local.containerAppsSubnetAddressPrefix]
+  networkSecurityGroupNames              = [local.privateEndpointSecurityGroupName, local.containerAppsSecurityGroupName]
+  # logAnalyticsWorkspaceResourceGroupName = local.containerAppsResourceGroupName
+  # logAnalyticsWorkspaceName              = local.logAnalyticsWorkspaceName
 }
