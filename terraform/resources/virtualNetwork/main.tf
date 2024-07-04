@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240703
+    Version    : 1.0.240704
 */
 
 /// variable
@@ -56,6 +56,7 @@ variable "logAnalyticsWorkspaceResourceGroupName" {
   default     = ""
 }
 
+/// tags
 variable "tags" {
   type    = map(string)
   default = {}

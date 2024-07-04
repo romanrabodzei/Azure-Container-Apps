@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240703
+    Version    : 1.0.240704
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -152,7 +152,7 @@ resource "azurerm_resource_group" "this_resource" {
   tags     = local.tags
 }
 
-module "Network_module" {
+module "network_module" {
   source                                 = "./resources/virtualNetwork"
   deploymentResourceGroupName            = azurerm_resource_group.this_resource.name
   deploymentLocation                     = var.deploymentLocation
@@ -161,6 +161,18 @@ module "Network_module" {
   virtualSubnetNames                     = [local.privateEndpointSubnetName, local.containerAppsSubnetName]
   virtualNetworkSubnetAddressPrefixes    = [local.privateEndpointSubnetAddressPrefix, local.containerAppsSubnetAddressPrefix]
   networkSecurityGroupNames              = [local.privateEndpointSecurityGroupName, local.containerAppsSecurityGroupName]
-  # logAnalyticsWorkspaceResourceGroupName = local.containerAppsResourceGroupName
-  # logAnalyticsWorkspaceName              = local.logAnalyticsWorkspaceName
+  logAnalyticsWorkspaceResourceGroupName = local.containerAppsResourceGroupName
+  logAnalyticsWorkspaceName              = local.logAnalyticsWorkspaceName
+  tags                                   = local.tags
+  depends_on                             = [module.logAnalyticsWorkspace_module]
+}
+
+module "logAnalyticsWorkspace_module" {
+  source                               = "./resources/logAnalyticsWorkspace"
+  deploymentResourceGroupName          = azurerm_resource_group.this_resource.name
+  deploymentLocation                   = var.deploymentLocation
+  logAnalyticsWorkspaceName            = local.logAnalyticsWorkspaceName
+  logAnalyticsWorkspaceRetentionInDays = var.logAnalyticsWorkspaceRetentionInDays
+  logAnalyticsWorkspaceDailyQuotaGb    = var.logAnalyticsWorkspaceDailyQuotaGb
+  tags                                 = local.tags
 }
