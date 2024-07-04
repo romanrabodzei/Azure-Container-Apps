@@ -109,6 +109,7 @@ resource "azurerm_subnet" "this_resource" {
   resource_group_name  = var.deploymentResourceGroupName
   virtual_network_name = var.virtualNetworkName
   address_prefixes     = [var.virtualNetworkSubnetAddressPrefixes[count.index]]
+  depends_on = [ azurerm_virtual_network.this_resource ]
 }
 
 resource "azurerm_monitor_diagnostic_setting" "send_data_to_logAnalyticsWorkspace_virtualNetwork" {
@@ -157,9 +158,9 @@ resource "azurerm_subnet_network_security_group_association" "subnet_nsg_associa
 }
 
 resource "azurerm_monitor_diagnostic_setting" "send_data_to_logAnalyticsWorkspace_networkSecurityGroup" {
-  for_each                   = { for i, networkSecurityGroup in local.networkSecurityGroups : i => networkSecurityGroup if length(var.logAnalyticsWorkspaceName) > 0 && length(var.logAnalyticsWorkspaceResourceGroupName) > 0 }
+  for_each                   = { for i, networkSecurityGroup in local.networkSecurityGroups : networkSecurityGroup => i if length(var.logAnalyticsWorkspaceName) > 0 && length(var.logAnalyticsWorkspaceResourceGroupName) > 0 }
   name                       = lower("send-data-to-${var.logAnalyticsWorkspaceName}")
-  target_resource_id         = each.value.id
+  target_resource_id         = azurerm_network_security_group.this_resource[each.value].id
   log_analytics_workspace_id = data.azurerm_log_analytics_workspace.this_resource[0].id
   enabled_log {
     category_group = "allLogs"

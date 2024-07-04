@@ -62,6 +62,7 @@ param containerAppsName string = 'az-${deploymentEnvironment}-capp'
 param containerAppsManagedEnvironmentName string = 'az-${deploymentEnvironment}-capp-env'
 
 /// virtual network
+param virtualNetworkName string = 'az-${deploymentEnvironment}-capp--vnet'
 var virtualNetworkAddressPrefix = '10.0.0.0/22'
 
 var privateEndpointSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'pe-subnet')
@@ -97,7 +98,7 @@ module network_module 'resources/virtualNetwork.bicep' = {
   name: toLower('virtualNetwork-${deploymentDate}')
   params: {
     location: deploymentLocation
-    virtualNetworkName: replace(containerAppsResourceGroupName, '-rg', '-vnet')
+    virtualNetworkName: virtualNetworkName
     virtualNetworkAddressPrefix: virtualNetworkAddressPrefix
     virtualSubnetNames: [
       containerAppsSubnetName

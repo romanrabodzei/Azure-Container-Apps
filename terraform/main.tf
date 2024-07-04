@@ -13,17 +13,18 @@
 
 locals {
   deploymentDate                      = formatdate("yyyyMMddHHmm", timestamp())
-  containerAppsResourceGroupName      = var.containerAppsResourceGroupName == "" ? "az-${var.deploymentEnvironment}-container-apps-rg" : var.containerAppsResourceGroupName
+  containerAppsResourceGroupName      = var.containerAppsResourceGroupName == "" ? "az-${var.deploymentEnvironment}-capp-rg" : var.containerAppsResourceGroupName
   logAnalyticsWorkspaceName           = var.logAnalyticsWorkspaceName == "" ? "az-${var.deploymentEnvironment}-capp-law" : var.logAnalyticsWorkspaceName
   userAssignedIdentityName            = var.userAssignedIdentityName == "" ? "az-${var.deploymentEnvironment}-capp-mi" : var.userAssignedIdentityName
   storageAccountName                  = var.storageAccountName == "" ? "az${var.deploymentEnvironment}cappstg" : var.storageAccountName
   containerRegistryName               = var.containerRegistryName == "" ? "az${var.deploymentEnvironment}cappacr" : var.containerRegistryName
   containerAppsName                   = var.containerAppsName == "" ? "az-${var.deploymentEnvironment}-capp" : var.containerAppsName
   containerAppsManagedEnvironmentName = var.containerAppsManagedEnvironmentName == "" ? "az-${var.deploymentEnvironment}-capp-env" : var.containerAppsManagedEnvironmentName
-  privateEndpointSubnetName           = replace(var.containerAppsResourceGroupName, "capp-rg", "pe-subnet")
+  virtualNetworkName                  = var.virtualNetworkName == "" ? "az-${var.deploymentEnvironment}-capp-vnet" : var.virtualNetworkName
+  privateEndpointSubnetName           = replace(local.containerAppsResourceGroupName, "capp-rg", "pe-subnet")
   privateEndpointSubnetAddressPrefix  = cidrsubnet(var.virtualNetworkAddressPrefix, 2, 3)
   privateEndpointSecurityGroupName    = "${local.privateEndpointSubnetName}-nsg"
-  containerAppsSubnetName             = replace(var.containerAppsResourceGroupName, "capp-rg", "capp-subnet")
+  containerAppsSubnetName             = replace(local.containerAppsResourceGroupName, "capp-rg", "capp-subnet")
   containerAppsSubnetAddressPrefix    = cidrsubnet(var.virtualNetworkAddressPrefix, 1, 0)
   containerAppsSecurityGroupName      = "${local.containerAppsSubnetName}-nsg"
   tagValue                            = var.tagValue == "" ? var.deploymentEnvironment : var.tagValue
@@ -120,6 +121,12 @@ variable "containerAppsManagedEnvironmentName" {
   default     = ""
 }
 
+variable "virtualNetworkName" {
+  type        = string
+  description = "The name of the virtual network."
+  default     = ""
+}
+
 variable "virtualNetworkAddressPrefix" {
   type        = string
   description = "The address prefix for the virtual network."
@@ -156,11 +163,11 @@ module "network_module" {
   source                                 = "./resources/virtualNetwork"
   deploymentResourceGroupName            = azurerm_resource_group.this_resource.name
   deploymentLocation                     = var.deploymentLocation
-  virtualNetworkName                     = replace(local.containerAppsResourceGroupName, "-rg", "-vnet")
+  virtualNetworkName                     = local.virtualNetworkName
   virtualNetworkAddressPrefix            = var.virtualNetworkAddressPrefix
-  virtualSubnetNames                     = [local.privateEndpointSubnetName, local.containerAppsSubnetName]
-  virtualNetworkSubnetAddressPrefixes    = [local.privateEndpointSubnetAddressPrefix, local.containerAppsSubnetAddressPrefix]
-  networkSecurityGroupNames              = [local.privateEndpointSecurityGroupName, local.containerAppsSecurityGroupName]
+  virtualSubnetNames                     = [local.containerAppsSubnetName, local.privateEndpointSubnetName]
+  virtualNetworkSubnetAddressPrefixes    = [local.containerAppsSubnetAddressPrefix, local.privateEndpointSubnetAddressPrefix]
+  networkSecurityGroupNames              = [local.containerAppsSecurityGroupName, local.privateEndpointSecurityGroupName]
   logAnalyticsWorkspaceResourceGroupName = local.containerAppsResourceGroupName
   logAnalyticsWorkspaceName              = local.logAnalyticsWorkspaceName
   tags                                   = local.tags
