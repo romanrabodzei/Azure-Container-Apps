@@ -2,7 +2,7 @@
 .Synopsis
     Terraform template for User-Assigned Identities.
     Template:
-      - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/user_assigned_identity
+      - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account
 
 .NOTES
     Author     : Roman Rabodzei
