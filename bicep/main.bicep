@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240703
+    Version    : 1.0.240707
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -93,31 +93,6 @@ resource resourceGroup_resource 'Microsoft.Resources/resourceGroups@2024-03-01' 
   tags: tags
 }
 
-module network_module 'resources/virtualNetwork.bicep' = {
-  scope: resourceGroup(containerAppsResourceGroupName)
-  name: toLower('virtualNetwork-${deploymentDate}')
-  params: {
-    location: deploymentLocation
-    virtualNetworkName: virtualNetworkName
-    virtualNetworkAddressPrefix: virtualNetworkAddressPrefix
-    virtualSubnetNames: [
-      containerAppsSubnetName
-      privateEndpointSubnetName
-    ]
-    virtualNetworkSubnetAddressPrefixes: [
-      containerAppsSubnetAddressPrefix[1]
-      privateEndpointSubnetAddressPrefix[1]
-    ]
-    networkSecurityGroupNames: [
-      containerAppsSecurityGroupName
-      privateEndpointSecurityGroupName
-    ]
-    logAnalyticsWorkspaceResourceGroupName: containerAppsResourceGroupName
-    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
-  }
-  dependsOn: [logAnalyticsWorkspace_module]
-}
-
 module logAnalyticsWorkspace_module './resources/logAnalyticsWorkspace.bicep' = {
   scope: resourceGroup_resource
   name: toLower('logAnalyticsWorkspace-${deploymentDate}')
@@ -140,6 +115,31 @@ module managedIdentity_module './resources/managedIdentity.bicep' = {
   }
 }
 
+module network_module 'resources/virtualNetwork.bicep' = {
+  scope: resourceGroup(resourceGroup_resource.name)
+  name: toLower('virtualNetwork-${deploymentDate}')
+  params: {
+    location: deploymentLocation
+    virtualNetworkName: virtualNetworkName
+    virtualNetworkAddressPrefix: virtualNetworkAddressPrefix
+    virtualSubnetNames: [
+      containerAppsSubnetName
+      privateEndpointSubnetName
+    ]
+    virtualNetworkSubnetAddressPrefixes: [
+      containerAppsSubnetAddressPrefix[1]
+      privateEndpointSubnetAddressPrefix[1]
+    ]
+    networkSecurityGroupNames: [
+      containerAppsSecurityGroupName
+      privateEndpointSecurityGroupName
+    ]
+    logAnalyticsWorkspaceResourceGroupName: resourceGroup_resource.name
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+  }
+  dependsOn: [logAnalyticsWorkspace_module]
+}
+
 module storageAccount_module './resources/storageAccount.bicep' = {
   scope: resourceGroup_resource
   name: toLower('storageAccount-${deploymentDate}')
@@ -147,12 +147,12 @@ module storageAccount_module './resources/storageAccount.bicep' = {
     location: deploymentLocation
     storageAccountName: storageAccountName
     networkIsolation: networkIsolation
-    virtualNetworkResourceGroupName: containerAppsResourceGroupName
-    virtualNetworkName: replace(containerAppsResourceGroupName, '-rg', '-vnet')
+    virtualNetworkResourceGroupName: resourceGroup_resource.name
+    virtualNetworkName: virtualNetworkName
     virtualNetworkSubnetName: privateEndpointSubnetName
-    userAssignedIdentityResourceGroupName: containerAppsResourceGroupName
+    userAssignedIdentityResourceGroupName: resourceGroup_resource.name
     userAssignedIdentityName: userAssignedIdentityName
-    logAnalyticsWorkspaceResourceGroupName: containerAppsResourceGroupName
+    logAnalyticsWorkspaceResourceGroupName: resourceGroup_resource.name
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     tags: tags
   }
@@ -171,12 +171,12 @@ module containerRegistry_module './resources/containerRegistry.bicep' = {
     applicationName: applicationName
     applicationImageToImport: applicationImageToImport
     networkIsolation: networkIsolation
-    virtualNetworkResourceGroupName: containerAppsResourceGroupName
-    virtualNetworkName: replace(containerAppsResourceGroupName, '-rg', '-vnet')
+    virtualNetworkResourceGroupName: resourceGroup_resource.name
+    virtualNetworkName: virtualNetworkName
     virtualNetworkSubnetName: privateEndpointSubnetName
-    userAssignedIdentityResourceGroupName: containerAppsResourceGroupName
+    userAssignedIdentityResourceGroupName: resourceGroup_resource.name
     userAssignedIdentityName: userAssignedIdentityName
-    logAnalyticsWorkspaceResourceGroupName: containerAppsResourceGroupName
+    logAnalyticsWorkspaceResourceGroupName: resourceGroup_resource.name
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     tags: tags
   }
@@ -196,16 +196,16 @@ module containerApps_module './resources/containerApps.bicep' = {
     containerAppsPort: applicationPort
     containerAppsFolder: applicationFolder
     containerAppsManagedEnvironmentName: containerAppsManagedEnvironmentName
-    containerRegistryResourceGroupName: containerAppsResourceGroupName
+    containerRegistryResourceGroupName: resourceGroup_resource.name
     containerRegistryName: containerRegistryName
-    virtualNetworkResourceGroupName: containerAppsResourceGroupName
-    virtualNetworkName: replace(containerAppsResourceGroupName, '-rg', '-vnet')
+    virtualNetworkResourceGroupName: resourceGroup_resource.name
+    virtualNetworkName: virtualNetworkName
     virtualNetworkSubnetName: containerAppsSubnetName
-    storageAccountResourceGroupName: containerAppsResourceGroupName
+    storageAccountResourceGroupName: resourceGroup_resource.name
     storageAccountName: storageAccountName
-    userAssignedIdentityResourceGroupName: containerAppsResourceGroupName
+    userAssignedIdentityResourceGroupName: resourceGroup_resource.name
     userAssignedIdentityName: userAssignedIdentityName
-    logAnalyticsWorkspaceResourceGroupName: containerAppsResourceGroupName
+    logAnalyticsWorkspaceResourceGroupName: resourceGroup_resource.name
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
     tags: tags
   }

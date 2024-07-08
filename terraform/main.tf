@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240704
+    Version    : 1.0.240707
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -159,6 +159,24 @@ resource "azurerm_resource_group" "this_resource" {
   tags     = local.tags
 }
 
+module "logAnalyticsWorkspace_module" {
+  source                               = "./resources/logAnalyticsWorkspace"
+  deploymentResourceGroupName          = azurerm_resource_group.this_resource.name
+  deploymentLocation                   = var.deploymentLocation
+  logAnalyticsWorkspaceName            = local.logAnalyticsWorkspaceName
+  logAnalyticsWorkspaceRetentionInDays = var.logAnalyticsWorkspaceRetentionInDays
+  logAnalyticsWorkspaceDailyQuotaGb    = var.logAnalyticsWorkspaceDailyQuotaGb
+  tags                                 = local.tags
+}
+
+module "managedIdentity_module" {
+  source                      = "./resources/managedIdentity"
+  deploymentResourceGroupName = azurerm_resource_group.this_resource.name
+  deploymentLocation          = var.deploymentLocation
+  userAssignedIdentityName    = local.userAssignedIdentityName
+  tags                        = local.tags
+}
+
 module "network_module" {
   source                                 = "./resources/virtualNetwork"
   deploymentResourceGroupName            = azurerm_resource_group.this_resource.name
@@ -174,12 +192,23 @@ module "network_module" {
   depends_on                             = [module.logAnalyticsWorkspace_module]
 }
 
-module "logAnalyticsWorkspace_module" {
-  source                               = "./resources/logAnalyticsWorkspace"
-  deploymentResourceGroupName          = azurerm_resource_group.this_resource.name
-  deploymentLocation                   = var.deploymentLocation
-  logAnalyticsWorkspaceName            = local.logAnalyticsWorkspaceName
-  logAnalyticsWorkspaceRetentionInDays = var.logAnalyticsWorkspaceRetentionInDays
-  logAnalyticsWorkspaceDailyQuotaGb    = var.logAnalyticsWorkspaceDailyQuotaGb
-  tags                                 = local.tags
+module "storageAccount_module" {
+  source                                 = "./resources/storageAccount"
+  deploymentResourceGroupName            = azurerm_resource_group.this_resource.name
+  deploymentLocation                     = var.deploymentLocation
+  storageAccountName                     = local.storageAccountName
+  networkIsolation                       = var.networkIsolation
+  virtualNetworkResourceGroupName        = azurerm_resource_group.this_resource.name
+  virtualNetworkName                     = local.virtualNetworkName
+  virtualNetworkSubnetName               = local.privateEndpointSubnetName
+  userAssignedIdentityResourceGroupName  = azurerm_resource_group.this_resource.name
+  userAssignedIdentityName               = local.userAssignedIdentityName
+  logAnalyticsWorkspaceResourceGroupName = azurerm_resource_group.this_resource.name
+  logAnalyticsWorkspaceName              = local.logAnalyticsWorkspaceName
+  tags                                   = local.tags
+  depends_on = [
+    module.logAnalyticsWorkspace_module,
+    module.managedIdentity_module,
+    module.network_module
+  ]
 }
