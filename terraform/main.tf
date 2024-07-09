@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240707
+    Version    : 1.0.240708
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -201,6 +201,29 @@ module "storageAccount_module" {
   virtualNetworkResourceGroupName        = azurerm_resource_group.this_resource.name
   virtualNetworkName                     = local.virtualNetworkName
   virtualNetworkSubnetName               = local.privateEndpointSubnetName
+  userAssignedIdentityResourceGroupName  = azurerm_resource_group.this_resource.name
+  userAssignedIdentityName               = local.userAssignedIdentityName
+  logAnalyticsWorkspaceResourceGroupName = azurerm_resource_group.this_resource.name
+  logAnalyticsWorkspaceName              = local.logAnalyticsWorkspaceName
+  tags                                   = local.tags
+  depends_on = [
+    module.logAnalyticsWorkspace_module,
+    module.managedIdentity_module,
+    module.network_module
+  ]
+}
+
+module "containerRegistry_module" {
+  source                                 = "./resources/containerRegistry"
+  deploymentResourceGroupName            = azurerm_resource_group.this_resource.name
+  deploymentLocation                     = var.deploymentLocation
+  containerRegistryName                  = local.containerRegistryName
+  applicationName                        = var.applicationName
+  applicationImageToImport               = var.applicationImageToImport
+  networkIsolation                       = var.networkIsolation
+  virtualNetworkResourceGroupName        = azurerm_resource_group.this_resource.name
+  virtualNetworkName                     = local.virtualNetworkName
+  virtualNetworkSubnetName               = local.containerAppsSubnetName
   userAssignedIdentityResourceGroupName  = azurerm_resource_group.this_resource.name
   userAssignedIdentityName               = local.userAssignedIdentityName
   logAnalyticsWorkspaceResourceGroupName = azurerm_resource_group.this_resource.name
