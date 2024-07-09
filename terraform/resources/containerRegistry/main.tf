@@ -116,15 +116,15 @@ resource "azurerm_container_registry" "this_resource" {
     identity_ids = [data.azurerm_user_assigned_identity.this_resource.id]
   }
   network_rule_set = [{
-    default_action = var.networkIsolation ? "Deny" : "Allow"
-    bypass         = ["AzureServices"]
-    ip_rule = []
+    default_action  = var.networkIsolation ? "Deny" : "Allow"
+    bypass          = ["AzureServices"]
+    ip_rule         = []
     virtual_network = []
   }]
   public_network_access_enabled = var.networkIsolation ? false : true
-  admin_enabled = true
-  tags          = var.tags
-  depends_on    = [data.azurerm_user_assigned_identity.this_resource]
+  admin_enabled                 = true
+  tags                          = var.tags
+  depends_on                    = [data.azurerm_user_assigned_identity.this_resource]
 }
 
 resource "azurerm_resource_deployment_script_azure_cli" "example" {

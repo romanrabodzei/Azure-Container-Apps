@@ -80,13 +80,13 @@ variable "userAssignedIdentityName" {
 variable "logAnalyticsWorkspaceResourceGroupName" {
   type        = string
   description = "The name of the resource group where the Log Analytics workspace is located."
-  default = ""
+  default     = ""
 }
 
 variable "logAnalyticsWorkspaceName" {
   type        = string
   description = "The name of the Log Analytics workspace."
-  default = ""
+  default     = ""
 }
 
 /// tags
@@ -204,7 +204,7 @@ resource "azurerm_private_endpoint" "this_resource" {
   }
   private_dns_zone_group {
     name                 = replace(local.fileSharePrivateDnsZoneName, "_", ".")
-    private_dns_zone_ids = [ azurerm_dns_zone.file_private_connection[0].id ]
+    private_dns_zone_ids = [azurerm_dns_zone.file_private_connection[0].id]
   }
 }
 
@@ -238,7 +238,7 @@ resource "azurerm_private_endpoint" "queue_private_connection" {
   }
   private_dns_zone_group {
     name                 = replace(local.queuePrivateDnsZoneName, "_", ".")
-    private_dns_zone_ids = [ azurerm_dns_zone.queue_private_connection[0].id ]
+    private_dns_zone_ids = [azurerm_dns_zone.queue_private_connection[0].id]
   }
 }
 

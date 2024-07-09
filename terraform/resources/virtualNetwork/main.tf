@@ -109,7 +109,7 @@ resource "azurerm_subnet" "this_resource" {
   resource_group_name  = var.deploymentResourceGroupName
   virtual_network_name = var.virtualNetworkName
   address_prefixes     = [var.virtualNetworkSubnetAddressPrefixes[count.index]]
-  depends_on = [ azurerm_virtual_network.this_resource ]
+  depends_on           = [azurerm_virtual_network.this_resource]
 }
 
 resource "azurerm_monitor_diagnostic_setting" "send_data_to_logAnalyticsWorkspace_virtualNetwork" {
