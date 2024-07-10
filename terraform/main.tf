@@ -40,7 +40,7 @@ variable "deploymentLocation" {
 variable "deploymentEnvironment" {
   type        = string
   description = "The environment where the resources will be deployed."
-  default     = "poc"
+  default     = "tf"
 }
 
 variable "containerAppsResourceGroupName" {

@@ -22,7 +22,7 @@ param deploymentLocation string = deployment().location
 
 @description('The environment where the resources will be deployed.')
 @maxLength(6)
-param deploymentEnvironment string = 'demo'
+param deploymentEnvironment string = 'bcp'
 
 @description('The UTC date and time when the deployment is executed.')
 param deploymentDate string = utcNow('yyyyMMddHHmm')
