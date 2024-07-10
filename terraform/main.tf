@@ -98,15 +98,15 @@ variable "applicationImageToImport" {
 }
 
 variable "DockerHubUserName" {
-  type = string
+  type        = string
   description = "Docker Hub username."
-  sensitive = true
+  sensitive   = true
 }
 
 variable "DockerHubToken" {
-  type = string
+  type        = string
   description = "Docker Hub token."
-  sensitive = true
+  sensitive   = true
 }
 
 variable "applicationPort" {
