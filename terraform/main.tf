@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240708
+    Version    : 1.0.240710
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -95,6 +95,18 @@ variable "applicationImageToImport" {
   type        = string
   description = "The image to import."
   default     = "docker.io/hurlenko/filebrowser:latest"
+}
+
+variable "DockerHubUserName" {
+  type = string
+  description = "Docker Hub username."
+  sensitive = true
+}
+
+variable "DockerHubToken" {
+  type = string
+  description = "Docker Hub token."
+  sensitive = true
 }
 
 variable "applicationPort" {
@@ -220,6 +232,8 @@ module "containerRegistry_module" {
   containerRegistryName                  = local.containerRegistryName
   applicationName                        = var.applicationName
   applicationImageToImport               = var.applicationImageToImport
+  DockerHubUserName                      = base64encode(var.DockerHubUserName)
+  DockerHubToken                         = base64encode(var.DockerHubToken)
   networkIsolation                       = var.networkIsolation
   virtualNetworkResourceGroupName        = azurerm_resource_group.this_resource.name
   virtualNetworkName                     = local.virtualNetworkName

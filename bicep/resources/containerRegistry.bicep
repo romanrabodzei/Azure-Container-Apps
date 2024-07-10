@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240622
+    Version    : 1.0.240710
 */
 
 /// deploymentScope
@@ -25,6 +25,8 @@ param containerRegistrySku string = 'Standard'
 
 param applicationName string
 param applicationImageToImport string
+param DockerHubUserName string
+param DockerHubToken string
 
 /// virtualNetworkParameters
 param networkIsolation bool = true
@@ -102,16 +104,42 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
         name: 'containerRegistrySku'
         value: containerRegistrySku
       }
+      {
+        name: 'DockerHubUserName'
+        value: DockerHubUserName
+      }
+      {
+        name: 'DockerHubToken'
+        value: DockerHubToken
+      }
     ]
     scriptContent: '''
-    if [ "$containerRegistrySku" = "premium" ]; then
-      az acr update --name $containerRegistryName --public-network-enabled true
-      az acr import --name $containerRegistryName --source $applicationImageToImport --image $applicationName:latest
-      az acr artifact-streaming update --name $containerRegistryName --repository $applicationName --enable-streaming true
-      az acr update --name $containerRegistryName --public-network-enabled false
-    else
-      az acr import --name $containerRegistryName --source $applicationImageToImport --image $applicationName:latest
-    fi
+      decodeOption=$(echo | base64 -d 2>&1 > /dev/null && echo '-d' || echo '-D')
+
+      # Function to check if the image tag exists in the registry
+      imageTagExists() {
+        registryName=$1
+        repositoryName=$2
+        tag=$3
+        exists=$(az acr repository show-tags --name "$registryName" --repository "$repositoryName" --query "contains([*], '$tag')" --output tsv)
+        echo "$exists"
+      }
+
+      # Check if the image tag already exists
+      tagExists=$(imageTagExists "$containerRegistryName" "$applicationName" "latest")
+
+      if [ "$tagExists" = "true" ]; then
+        echo "Tag $applicationName:latest already exists in $containerRegistryName. Skipping import."
+      else
+        if [ "$containerRegistrySku" = "premium" ]; then
+          az acr update --name $containerRegistryName --public-network-enabled true
+          az acr import --name $containerRegistryName --source $applicationImageToImport --image $applicationName:latest --username $(echo $DockerHubUserName | base64 $decodeOption) --password $(echo $DockerHubToken | base64 $decodeOption)
+          az acr artifact-streaming update --name $containerRegistryName --repository $applicationName --enable-streaming true
+          az acr update --name $containerRegistryName --public-network-enabled false
+        else
+          az acr import --name $containerRegistryName --source $applicationImageToImport --image $applicationName:latest --username $(echo $DockerHubUserName | base64 $decodeOption) --password $(echo $DockerHubToken | base64 $decodeOption)
+        fi
+      fi
     '''
     timeout: 'PT1H'
     retentionInterval: 'PT1H'

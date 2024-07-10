@@ -100,9 +100,6 @@ variable "tags" {
 locals {
   fileSharePrivateDnsZoneName = "privatelink_file_core_windows_net"
   queuePrivateDnsZoneName     = "privatelink_queue_core_windows_net"
-
-  StorageBlobDataContributor         = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
-  StorageFileDataSMBShareContributor = "0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb"
 }
 
 /// resources
@@ -137,30 +134,19 @@ data "azurerm_user_assigned_identity" "this_resource" {
   resource_group_name = var.userAssignedIdentityResourceGroupName
 }
 
-data "azurerm_role_definition" "blob_data_contributor" {
-  name  = local.StorageBlobDataContributor
-  scope = var.deploymentResourceGroupName
-}
-
 resource "azurerm_role_assignment" "blob_data_contributor" {
-  scope              = azurerm_storage_account.this_resource.id
-  name               = local.StorageBlobDataContributor
-  principal_type     = "ServicePrincipal"
-  principal_id       = data.azurerm_user_assigned_identity.this_resource.principal_id
-  role_definition_id = data.azurerm_role_definition.blob_data_contributor.id
+  scope                = azurerm_storage_account.this_resource.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_type       = "ServicePrincipal"
+  principal_id         = data.azurerm_user_assigned_identity.this_resource.principal_id
 }
 
-data "azurerm_role_definition" "file_data_contributor" {
-  name  = local.StorageFileDataSMBShareContributor
-  scope = var.deploymentResourceGroupName
-}
 
 resource "azurerm_role_assignment" "file_data_contributor" {
-  scope              = azurerm_storage_account.this_resource.id
-  name               = local.StorageFileDataSMBShareContributor
-  principal_type     = "ServicePrincipal"
-  principal_id       = data.azurerm_user_assigned_identity.this_resource.principal_id
-  role_definition_id = data.azurerm_role_definition.file_data_contributor.id
+  scope                = azurerm_storage_account.this_resource.id
+  role_definition_name = "Storage File Data SMB Share Contributor"
+  principal_type       = "ServicePrincipal"
+  principal_id         = data.azurerm_user_assigned_identity.this_resource.principal_id
 }
 
 data "azurerm_virtual_network" "this_resource" {
@@ -252,6 +238,9 @@ resource "azurerm_monitor_diagnostic_setting" "nthis_resourceame" {
   name                       = lower("send-data-to-${var.logAnalyticsWorkspaceName}")
   target_resource_id         = azurerm_storage_account.this_resource.id
   log_analytics_workspace_id = data.azurerm_log_analytics_workspace.this_resource[0].id
+  metric {
+    category = "Capacity"
+  }
   metric {
     category = "Transaction"
   }

@@ -247,6 +247,10 @@ resource send_data_to_logAnalyticsWorkspace 'Microsoft.Insights/diagnosticSettin
     workspaceId: logAnalytics_resource.id
     metrics: [
       {
+        category: 'Capacity'
+        enabled: true
+      }
+      {
         category: 'Transaction'
         enabled: true
       }

@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240707
+    Version    : 1.0.240710
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -52,6 +52,12 @@ param containerRegistryName string = 'az${deploymentEnvironment}cappacr'
 @description('Name of the application, used for the deployment.')
 param applicationName string = 'filebrowser'
 param applicationImageToImport string = 'docker.io/hurlenko/filebrowser:latest'
+@description('DockerHub username.')
+@secure()
+param DockerHubUserName string
+@description('DockerHub token.')
+@secure()
+param DockerHubToken string
 param applicationPort int = 8080
 param applicationFolder string = 'data'
 
@@ -170,6 +176,8 @@ module containerRegistry_module './resources/containerRegistry.bicep' = {
     containerRegistryName: containerRegistryName
     applicationName: applicationName
     applicationImageToImport: applicationImageToImport
+    DockerHubUserName: base64(DockerHubUserName)
+    DockerHubToken: base64(DockerHubToken)
     networkIsolation: networkIsolation
     virtualNetworkResourceGroupName: resourceGroup_resource.name
     virtualNetworkName: virtualNetworkName

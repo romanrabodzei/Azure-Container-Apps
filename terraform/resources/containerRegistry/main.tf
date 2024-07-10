@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240708
+    Version    : 1.0.240710
 */
 
 /// variables
@@ -43,6 +43,16 @@ variable "applicationName" {
 variable "applicationImageToImport" {
   type        = string
   description = "The image to import"
+}
+
+variable "DockerHubUserName" {
+  type        = string
+  description = "Docker Hub username."
+}
+
+variable "DockerHubToken" {
+  type        = string
+  description = "Docker Hub token."
 }
 
 variable "networkIsolation" {
@@ -100,9 +110,13 @@ variable "tags" {
 
 /// locals
 locals {
-  registryPrivateDnsZoneName                = "privatelink_azurecr_io"
-  containerRegistryACRRepositoryContributor = "2efddaa5-3f1f-4df3-97df-af3f13818f4c"
-  containerRegistryContributor              = "b24988ac-6180-42a0-ab88-20f7382dd24c"
+  registryPrivateDnsZoneName = "privatelink_azurecr_io"
+  premiumNetworkRuleSet = [{
+    default_action  = var.networkIsolation ? "Deny" : "Allow"
+    bypass          = ["AzureServices"]
+    ip_rule         = []
+    virtual_network = []
+  }]
 }
 
 /// resources
@@ -115,19 +129,14 @@ resource "azurerm_container_registry" "this_resource" {
     type         = "UserAssigned"
     identity_ids = [data.azurerm_user_assigned_identity.this_resource.id]
   }
-  network_rule_set = [{
-    default_action  = var.networkIsolation ? "Deny" : "Allow"
-    bypass          = ["AzureServices"]
-    ip_rule         = []
-    virtual_network = []
-  }]
+  network_rule_set              = var.networkIsolation ? local.premiumNetworkRuleSet : []
   public_network_access_enabled = var.networkIsolation ? false : true
   admin_enabled                 = true
   tags                          = var.tags
   depends_on                    = [data.azurerm_user_assigned_identity.this_resource]
 }
 
-resource "azurerm_resource_deployment_script_azure_cli" "example" {
+resource "azurerm_resource_deployment_script_azure_cli" "this_resource" {
   name                = replace(var.deploymentResourceGroupName, "-rg", "-ds-azcli")
   resource_group_name = var.deploymentResourceGroupName
   location            = var.deploymentLocation
@@ -153,14 +162,40 @@ resource "azurerm_resource_deployment_script_azure_cli" "example" {
     name  = "containerRegistrySku"
     value = var.containerRegistrySku
   }
+  environment_variable {
+    name  = "DockerHubUserName"
+    value = var.DockerHubUserName
+  }
+  environment_variable {
+    name  = "DockerHubToken"
+    value = var.DockerHubToken
+  }
   script_content     = <<EOF
-    if [ "$containerRegistrySku" = "premium" ]; then
-      az acr update --name $containerRegistryName --public-network-enabled true
-      az acr import --name $containerRegistryName --source $applicationImageToImport --image $applicationName:latest
-      az acr artifact-streaming update --name $containerRegistryName --repository $applicationName --enable-streaming true
-      az acr update --name $containerRegistryName --public-network-enabled false
+    decodeOption=$(echo | base64 -d 2>&1 > /dev/null && echo '-d' || echo '-D')
+
+    # Function to check if the image tag exists in the registry
+    imageTagExists() {
+      registryName=$1
+      repositoryName=$2
+      tag=$3
+      exists=$(az acr repository show-tags --name "$registryName" --repository "$repositoryName" --query "contains([*], '$tag')" --output tsv)
+      echo "$exists"
+    }
+
+    # Check if the image tag already exists
+    tagExists=$(imageTagExists "$containerRegistryName" "$applicationName" "latest")
+
+    if [ "$tagExists" = "true" ]; then
+      echo "Tag $applicationName:latest already exists in $containerRegistryName. Skipping import."
     else
-      az acr import --name $containerRegistryName --source $applicationImageToImport --image $applicationName:latest
+      if [ "$containerRegistrySku" = "premium" ]; then
+        az acr update --name $containerRegistryName --public-network-enabled true
+        az acr import --name $containerRegistryName --source $applicationImageToImport --image $applicationName:latest --username $(echo $DockerHubUserName | base64 $decodeOption) --password $(echo $DockerHubToken | base64 $decodeOption)
+        az acr artifact-streaming update --name $containerRegistryName --repository $applicationName --enable-streaming true
+        az acr update --name $containerRegistryName --public-network-enabled false
+      else
+        az acr import --name $containerRegistryName --source $applicationImageToImport --image $applicationName:latest --username $(echo $DockerHubUserName | base64 $decodeOption) --password $(echo $DockerHubToken | base64 $decodeOption)
+      fi
     fi
   EOF
   timeout            = "PT1H"
@@ -174,30 +209,18 @@ data "azurerm_user_assigned_identity" "this_resource" {
   resource_group_name = var.userAssignedIdentityResourceGroupName
 }
 
-data "azurerm_role_definition" "acr_repository_contributor" {
-  name  = local.containerRegistryACRRepositoryContributor
-  scope = var.deploymentResourceGroupName
-}
-
 resource "azurerm_role_assignment" "acr_repository_contributor" {
-  scope              = azurerm_container_registry.this_resource.id
-  name               = local.containerRegistryACRRepositoryContributor
-  principal_type     = "ServicePrincipal"
-  principal_id       = data.azurerm_user_assigned_identity.this_resource.principal_id
-  role_definition_id = data.azurerm_role_definition.acr_repository_contributor.id
-}
-
-data "azurerm_role_definition" "container_registry_contributor" {
-  name  = local.containerRegistryContributor
-  scope = var.deploymentResourceGroupName
+  scope                = azurerm_container_registry.this_resource.id
+  role_definition_name = "ACR Repository Contributor"
+  principal_type       = "ServicePrincipal"
+  principal_id         = data.azurerm_user_assigned_identity.this_resource.principal_id
 }
 
 resource "azurerm_role_assignment" "container_registry_contributor" {
-  scope              = azurerm_container_registry.this_resource.id
-  name               = local.containerRegistryContributor
-  principal_type     = "ServicePrincipal"
-  principal_id       = data.azurerm_user_assigned_identity.this_resource.principal_id
-  role_definition_id = data.azurerm_role_definition.container_registry_contributor.id
+  scope                = azurerm_container_registry.this_resource.id
+  role_definition_name = "Contributor"
+  principal_type       = "ServicePrincipal"
+  principal_id         = data.azurerm_user_assigned_identity.this_resource.principal_id
 }
 
 data "azurerm_virtual_network" "this_resource" {
@@ -255,8 +278,11 @@ resource "azurerm_monitor_diagnostic_setting" "nthis_resourceame" {
   name                       = lower("send-data-to-${var.logAnalyticsWorkspaceName}")
   target_resource_id         = azurerm_container_registry.this_resource.id
   log_analytics_workspace_id = data.azurerm_log_analytics_workspace.this_resource[0].id
+  enabled_log {
+    category_group = "allLogs"
+  }
   metric {
-    category = "Transaction"
+    category = "AllMetrics"
   }
 }
 
