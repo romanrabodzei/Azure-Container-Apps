@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240622
+    Version    : 1.0.240707
 */
 
 /// deploymentScope
@@ -21,10 +21,10 @@ param storageAccountType string = 'Standard_RAGZRS'
 param storageAccountFileShareName string = 'fileshare'
 
 /// virtualNetworkParameters
-param networkIsolation bool = true
-param virtualNetworkResourceGroupName string
-param virtualNetworkName string
-param virtualNetworkSubnetName string
+param networkIsolation bool = false
+param virtualNetworkResourceGroupName string = ''
+param virtualNetworkName string = ''
+param virtualNetworkSubnetName string = ''
 var fileSharePrivateDnsZoneName = 'privatelink_file_core_windows_net'
 var queuePrivateDnsZoneName = 'privatelink_queue_core_windows_net'
 
@@ -33,8 +33,8 @@ param userAssignedIdentityResourceGroupName string
 param userAssignedIdentityName string
 
 /// storageAccountMonitoring
-param logAnalyticsWorkspaceName string = ''
 param logAnalyticsWorkspaceResourceGroupName string = ''
+param logAnalyticsWorkspaceName string = ''
 
 /// tags
 param tags object = {}
@@ -246,6 +246,10 @@ resource send_data_to_logAnalyticsWorkspace 'Microsoft.Insights/diagnosticSettin
   properties: {
     workspaceId: logAnalytics_resource.id
     metrics: [
+      {
+        category: 'Capacity'
+        enabled: true
+      }
       {
         category: 'Transaction'
         enabled: true

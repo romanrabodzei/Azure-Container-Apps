@@ -3,7 +3,7 @@
 #
 # .NOTES
 #     Author     : Roman Rabodzei
-#     Version    : 1.0.240616
+#     Version    : 1.0.240710
 #
 #             _
 #         .__(.)<  (MEOW)
@@ -58,6 +58,6 @@ jobs:
                 scriptType: 'bash'
                 scriptLocation: 'inlineScript'
                 inlineScript: |
-                  az deployment sub validate --name "$(Build.BuildId)" --location "$(deploymentLocation)" --template-file ./main.bicep --parameters deploymentEnvironment="$(deploymentEnvironment)"
+                  az deployment sub validate --name "$(Build.BuildId)" --location "$(deploymentLocation)" --template-file ./main.bicep --parameters deploymentEnvironment="$(deploymentEnvironment)" DockerHubUserName="$(DOCKERHUB_USERNAME)" DockerHubToken="$(DOCKERHUB_PASSWORD)"
                 failOnStandardError: true
                 workingDirectory: '$(system.defaultWorkingDirectory)/bicep'
