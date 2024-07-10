@@ -58,6 +58,6 @@ jobs:
                 scriptType: 'bash'
                 scriptLocation: 'inlineScript'
                 inlineScript: |
-                  az deployment sub validate --name "$(Build.BuildId)" --location "$(deploymentLocation)" --template-file ./main.bicep --parameters deploymentEnvironment="$(deploymentEnvironment)" DockerHubUserName="$(DOCKERHUB_USERNAME)" DockerHubPassword="$(DOCKERHUB_PASSWORD)"
+                  az deployment sub validate --name "$(Build.BuildId)" --location "$(deploymentLocation)" --template-file ./main.bicep --parameters deploymentEnvironment="$(deploymentEnvironment)" DockerHubUserName="$(DOCKERHUB_USERNAME)" DockerHubToken="$(DOCKERHUB_PASSWORD)"
                 failOnStandardError: true
                 workingDirectory: '$(system.defaultWorkingDirectory)/bicep'
