@@ -1,6 +1,6 @@
 /*
 .Synopsis
-    Terraform template for User-Assigned Identities.
+    Terraform template for Standard Storage Account.
     Template:
       - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account
 

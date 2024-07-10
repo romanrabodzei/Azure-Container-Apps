@@ -1,6 +1,6 @@
 /*
 .Synopsis
-    Bicep template for Log Analytics Workspace.
+    Terraform template for Log Analytics Workspace.
     Template:
       - https://docs.microsoft.com/en-us/azure/templates/Microsoft.OperationalInsights/workspaces?tabs=bicep#template-format
 

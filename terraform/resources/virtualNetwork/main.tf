@@ -1,6 +1,6 @@
 /*
 .Synopsis
-    Bicep template for Virtual Network.
+    Terraform template for Virtual Network.
     Template:
       - https://docs.microsoft.com/en-us/azure/templates/Microsoft.Network/virtualNetworks?tabs=bicep#template-format
 

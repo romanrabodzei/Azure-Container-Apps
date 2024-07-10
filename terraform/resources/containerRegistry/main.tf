@@ -1,6 +1,6 @@
 /*
 .Synopsis
-    Bicep template for Container Registry.
+    Terraform template for Container Registry.
     Template:
       - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/container_registry
 

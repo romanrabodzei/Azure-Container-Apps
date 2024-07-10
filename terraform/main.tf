@@ -1,6 +1,6 @@
 /*
 .Synopsis
-    Main Bicep template for Azure Container Apps components.
+    Main Terraform template for Azure Container Apps components.
 
 .NOTES
     Author     : Roman Rabodzei
