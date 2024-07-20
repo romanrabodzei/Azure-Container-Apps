@@ -1,0 +1,84 @@
+# .Synopsis
+#     Terraform deployment workflow
+#
+# .NOTES
+#     Author     : Roman Rabodzei
+#     Version    : 1.0.240623
+#
+#             _
+#         .__(.)<  (MEOW)
+#          \___)
+#  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+name: Terraform Deployment workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploymentLocation:
+        description: "Deployment location"
+        type: string
+        required: true
+        default: "west europe"
+      deploymentEnvironment:
+        description: "Deployment environment"
+        type: environment
+        required: true
+        default: "demo"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform_check_changes:
+    name: Preview infrastructure changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init -backend=false
+        working-directory: terraform
+
+      - name: Preview changes
+        run: |
+          terraform plan -var="deploymentLocation=${{ inputs.deploymentLocation }}" -var="deploymentEnvironment=${{ inputs.deploymentEnvironment }}"
+        working-directory: terraform
+
+  terraform_deploy:
+    name: Deploy infrastructure
+    runs-on: ubuntu-latest
+    needs: terraform_check_changes
+    environment: ${{ inputs.deploymentEnvironment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init -backend=false
+        working-directory: terraform
+
+      - name: Apply changes
+        run: |
+          terraform apply -auto-approve -var="deploymentLocation=${{ inputs.deploymentLocation }}" -var="deploymentEnvironment=${{ inputs.deploymentEnvironment }}"
+        working-directory: terraform

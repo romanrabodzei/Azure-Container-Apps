@@ -1,0 +1,73 @@
+# .Synopsis
+#     Bicep deployment workflow
+#
+# .NOTES
+#     Author     : Roman Rabodzei
+#     Version    : 1.0.240623
+#
+#             _
+#         .__(.)<  (MEOW)
+#          \___)
+#  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+name: Bicep Deployment workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploymentLocation:
+        description: "Deployment location"
+        type: string
+        required: true
+        default: "west europe"
+      deploymentEnvironment:
+        description: "Deployment environment"
+        type: environment
+        required: true
+        default: "demo"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  bicep_check_changes:
+    name: Preview infrastructure changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Preview changes
+        run: |
+          az deployment sub what-if --name "Bicep_Deployment_workflow_1.0.${{ github.run_number }}" --location "${{ inputs.deploymentLocation }}" --template-file ./main.bicep --parameters deploymentEnvironment="${{ inputs.deploymentEnvironment }}"
+        working-directory: bicep
+
+  bicep_deploy:
+    name: Deploy infrastructure
+    runs-on: ubuntu-latest
+    needs: bicep_check_changes
+    environment: ${{ inputs.deploymentEnvironment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: ${{ env.working-directory }}
+          fetch-depth: 0
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy templates
+        run: |
+          az deployment sub create --name "Bicep_Deployment_workflow_1.0.${{ github.run_number }}" --location "${{ inputs.deploymentLocation }}" --template-file ./main.bicep --parameters deploymentEnvironment="${{ inputs.deploymentEnvironment }}"
+        working-directory: bicep
