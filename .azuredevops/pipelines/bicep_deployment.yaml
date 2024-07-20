@@ -3,7 +3,7 @@
 #
 # .NOTES
 #     Author     : Roman Rabodzei
-#     Version    : 1.0.240616
+#     Version    : 1.0.240719
 #
 #             _
 #         .__(.)<  (MEOW)
@@ -43,7 +43,7 @@ stages:
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                az deployment sub what-if --name "$(Build.BuildNumber)" --location "${{ parameters.deploymentLocation }}" --template-file ./main.bicep --parameters deploymentEnvironment="${{ parameters.deploymentEnvironment }}"
+                az deployment sub what-if --name "$(Build.BuildNumber)" --location "${{ parameters.deploymentLocation }}" --template-file ./main.bicep --parameters deploymentEnvironment="${{ parameters.deploymentEnvironment }}" DockerHubUserName="$(DOCKERHUB_USERNAME)" DockerHubToken="$(DOCKERHUB_PASSWORD)"
               workingDirectory: "$(system.defaultWorkingDirectory)/bicep"
 
   - stage: bicep_deploy
@@ -65,5 +65,5 @@ stages:
                     scriptType: "bash"
                     scriptLocation: "inlineScript"
                     inlineScript: |
-                      az deployment sub create --name "$(Build.BuildNumber)" --location "${{ parameters.deploymentLocation }}" --template-file ./main.bicep --parameters deploymentEnvironment="${{ parameters.deploymentEnvironment }}"
+                      az deployment sub create --name "$(Build.BuildNumber)" --location "${{ parameters.deploymentLocation }}" --template-file ./main.bicep --parameters deploymentEnvironment="${{ parameters.deploymentEnvironment }}" DockerHubUserName="$(DOCKERHUB_USERNAME)" DockerHubToken="$(DOCKERHUB_PASSWORD)"
                     workingDirectory: "$(system.defaultWorkingDirectory)/bicep"
