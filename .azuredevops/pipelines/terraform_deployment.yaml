@@ -52,7 +52,7 @@ stages:
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                terraform plan -var="deploymentLocation=${{ parameters.deploymentLocation }}" -var="deploymentEnvironment=${{ parameters.deploymentEnvironment }}" -var="dockerHubUsername=$(DOCKERHUB_USERNAME)" -var="dockerHubToken=$(DOCKERHUB_PASSWORD)"
+                terraform plan -var="deploymentLocation=${{ parameters.deploymentLocation }}" -var="deploymentEnvironment=${{ parameters.deploymentEnvironment }}" -var="DockerHubUserName=$(DOCKERHUB_USERNAME)" -var="DockerHubToken=$(DOCKERHUB_PASSWORD)"
               workingDirectory: "$(system.defaultWorkingDirectory)/terraform"
 
   - stage: terraform_deploy
@@ -83,5 +83,5 @@ stages:
                     scriptType: "bash"
                     scriptLocation: "inlineScript"
                     inlineScript: |
-                      terraform apply -var="deploymentLocation=${{ parameters.deploymentLocation }}" -var="deploymentEnvironment=${{ parameters.deploymentEnvironment }}" -var="dockerHubUsername=$(DOCKERHUB_USERNAME)" -var="dockerHubToken=$(DOCKERHUB_PASSWORD)"
+                      terraform apply -var="deploymentLocation=${{ parameters.deploymentLocation }}" -var="deploymentEnvironment=${{ parameters.deploymentEnvironment }}" -var="DockerHubUserName=$(DOCKERHUB_USERNAME)" -var="DockerHubToken=$(DOCKERHUB_PASSWORD)"
                     workingDirectory: "$(system.defaultWorkingDirectory)/terraform"

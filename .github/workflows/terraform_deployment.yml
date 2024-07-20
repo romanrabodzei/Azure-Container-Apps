@@ -53,7 +53,7 @@ jobs:
 
       - name: Preview changes
         run: |
-          terraform plan -var="deploymentLocation=${{ inputs.deploymentLocation }}" -var="deploymentEnvironment=${{ inputs.deploymentEnvironment }}" -var="dockerHubUsername=${{ secrets.DOCKERHUB_USERNAME }}" -var="dockerHubToken=${{ secrets.DOCKERHUB_PASSWORD }}"
+          terraform plan -var="deploymentLocation=${{ inputs.deploymentLocation }}" -var="deploymentEnvironment=${{ inputs.deploymentEnvironment }}" -var="DockerHubUserName=${{ secrets.DOCKERHUB_USERNAME }}" -var="DockerHubToken=${{ secrets.DOCKERHUB_PASSWORD }}"
         working-directory: terraform
 
   terraform_deploy:
@@ -80,5 +80,5 @@ jobs:
 
       - name: Apply changes
         run: |
-          terraform apply -auto-approve -var="deploymentLocation=${{ inputs.deploymentLocation }}" -var="deploymentEnvironment=${{ inputs.deploymentEnvironment }}" -var="dockerHubUsername=${{ secrets.DOCKERHUB_USERNAME }}" -var="dockerHubToken=${{ secrets.DOCKERHUB_PASSWORD }}"
+          terraform apply -auto-approve -var="deploymentLocation=${{ inputs.deploymentLocation }}" -var="deploymentEnvironment=${{ inputs.deploymentEnvironment }}" -var="DockerHubUserName=${{ secrets.DOCKERHUB_USERNAME }}" -var="DockerHubToken=${{ secrets.DOCKERHUB_PASSWORD }}"
         working-directory: terraform
