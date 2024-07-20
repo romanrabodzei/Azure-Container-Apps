@@ -179,7 +179,7 @@ resource "azurerm_container_app" "this_resource" {
       latest_revision = true
       percentage      = 100
     }
-    target_port  = var.containerAppsPort
+    target_port = var.containerAppsPort
   }
   registry {
     identity = data.azurerm_user_assigned_identity.this_resource.id
