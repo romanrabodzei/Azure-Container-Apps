@@ -136,12 +136,6 @@ data "azurerm_storage_account" "this_resource" {
   resource_group_name = var.storageAccountResourceGroupName
 }
 
-resource "azurerm_storage_share" "example" {
-  name                 = "fileshare"
-  storage_account_name = var.storageAccountName
-  quota                = 5
-}
-
 data "azurerm_container_registry" "this_resource" {
   name                = var.containerRegistryName
   resource_group_name = var.deploymentResourceGroupName
@@ -153,6 +147,12 @@ resource "azurerm_container_app_environment" "this_resource" {
   resource_group_name        = var.deploymentResourceGroupName
   infrastructure_subnet_id   = data.azurerm_subnet.this_resource.id
   log_analytics_workspace_id = data.azurerm_log_analytics_workspace.this_resource[0].id
+  lifecycle {
+    ignore_changes = [
+      infrastructure_subnet_id,
+      log_analytics_workspace_id
+    ]
+  }
 }
 
 resource "azurerm_container_app_environment_storage" "this_resource" {
@@ -164,18 +164,46 @@ resource "azurerm_container_app_environment_storage" "this_resource" {
   access_mode                  = "ReadWrite"
 }
 
-# resource "azurerm_container_app" "example" {
-#   name                         = "example-app"
-#   container_app_environment_id = azurerm_container_app_environment.example.id
-#   resource_group_name          = azurerm_resource_group.example.name
-#   revision_mode                = "Single"
+resource "azurerm_container_app" "this_resource" {
+  name                = var.containerAppsName
+  resource_group_name = var.deploymentResourceGroupName
+  revision_mode       = "Single"
+  identity {
+    type = "UserAssigned"
+    identity_ids = [
+      data.azurerm_user_assigned_identity.this_resource.id
+    ]
+  }
+  ingress {
+    traffic_weight {
+      latest_revision = true
+      percentage      = 100
+    }
+    target_port = var.containerAppsPort
+  }
+  registry {
+    identity = data.azurerm_user_assigned_identity.this_resource.id
+    server   = data.azurerm_container_registry.this_resource.login_server
+  }
+  container_app_environment_id = azurerm_container_app_environment.this_resource.id
 
-#   template {
-#     container {
-#       name   = "examplecontainerapp"
-#       image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
-#       cpu    = 0.25
-#       memory = "0.5Gi"
-#     }
-#   }
-# }
+  template {
+    container {
+      name   = var.containerAppsName
+      image  = "${data.azurerm_container_registry.this_resource.login_server}/${var.containerAppsImage}"
+      cpu    = 0.25
+      memory = "0.5Gi"
+      volume_mounts {
+        name = var.containerAppsFolder
+        path = var.containerAppsFolder
+      }
+    }
+    min_replicas = 1
+    max_replicas = 3
+    volume {
+      name         = var.containerAppsFolder
+      storage_name = data.azurerm_storage_account.this_resource.name
+      storage_type = "AzureFile"
+    }
+  }
+}
