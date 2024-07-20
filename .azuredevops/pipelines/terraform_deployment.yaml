@@ -1,0 +1,87 @@
+# .Synopsis
+#     Terraform deployment pipeline
+#
+# .NOTES
+#     Author     : Roman Rabodzei
+#     Version    : 1.0.240617
+#
+#             _
+#         .__(.)<  (MEOW)
+#          \___)
+#  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+name: "Terraform_Deployment_pipeline_1.0.$(Rev:.r)"
+
+trigger: none
+
+pr: none
+
+parameters:
+  - name: deploymentLocation
+    displayName: "Deployment location"
+    type: string
+    default: "west europe"
+  - name: deploymentEnvironment
+    displayName: "Deployment environment"
+    type: string
+    default: "poc"
+
+pool:
+  vmImage: "ubuntu-latest"
+
+stages:
+  - stage: terraform_check_changes
+    displayName: "Preview infrastructure changes"
+    jobs:
+      - job:
+        steps:
+          - checkout: self
+
+          - task: CmdLine@2
+            displayName: 'Terraform Init'
+            inputs:
+              script: |
+                terraform init -backend=false
+              workingDirectory: '$(system.defaultWorkingDirectory)/terraform'
+              failOnStderr: true
+
+          - task: AzureCLI@2
+            displayName: "Preview changes"
+            inputs:
+              azureSubscription: $(subscription)
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                terraform plan -var="deploymentLocation=${{ parameters.deploymentLocation }}" -var="deploymentEnvironment=${{ parameters.deploymentEnvironment }}"
+              workingDirectory: "$(system.defaultWorkingDirectory)/terraform"
+
+  - stage: terraform_deploy
+    displayName: "Deploy infrastructure"
+    dependsOn: terraform_check_changes
+    jobs:
+      - deployment:
+        environment: ${{ parameters.deploymentEnvironment }}
+        displayName: "Deploy infrastructure"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: CmdLine@2
+                  displayName: 'Terraform Init'
+                  inputs:
+                    script: |
+                      terraform init -backend=false
+                    workingDirectory: '$(system.defaultWorkingDirectory)/terraform'
+                    failOnStderr: true
+
+                - task: AzureCLI@2
+                  displayName: "Deploy infrastructure"
+                  inputs:
+                    azureSubscription: $(subscription)
+                    scriptType: "bash"
+                    scriptLocation: "inlineScript"
+                    inlineScript: |
+                      terraform apply -var="deploymentLocation=${{ parameters.deploymentLocation }}" -var="deploymentEnvironment=${{ parameters.deploymentEnvironment }}"
+                    workingDirectory: "$(system.defaultWorkingDirectory)/terraform"
