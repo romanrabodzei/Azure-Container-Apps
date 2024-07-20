@@ -249,3 +249,33 @@ module "containerRegistry_module" {
     module.network_module
   ]
 }
+
+module "containerApps_module" {
+  source                                 = "./resources/containerApps"
+  deploymentLocation                     = var.deploymentLocation
+  deploymentResourceGroupName            = azurerm_resource_group.this_resource.name
+  containerAppsName                      = local.containerAppsName
+  containerAppsImage                     = "${var.applicationName}:latest"
+  containerAppsPort                      = var.applicationPort
+  containerAppsFolder                    = var.applicationFolder
+  containerAppsManagedEnvironmentName    = local.containerAppsManagedEnvironmentName
+  containerRegistryResourceGroupName     = azurerm_resource_group.this_resource.name
+  containerRegistryName                  = local.containerRegistryName
+  userAssignedIdentityResourceGroupName  = azurerm_resource_group.this_resource.name
+  userAssignedIdentityName               = local.userAssignedIdentityName
+  storageAccountResourceGroupName        = azurerm_resource_group.this_resource.name
+  storageAccountName                     = local.storageAccountName
+  virtualNetworkResourceGroupName        = azurerm_resource_group.this_resource.name
+  virtualNetworkName                     = local.virtualNetworkName
+  virtualNetworkSubnetName               = local.containerAppsSubnetName
+  logAnalyticsWorkspaceResourceGroupName = azurerm_resource_group.this_resource.name
+  logAnalyticsWorkspaceName              = local.logAnalyticsWorkspaceName
+  tags                                   = local.tags
+  depends_on = [
+    module.logAnalyticsWorkspace_module,
+    module.managedIdentity_module,
+    module.network_module,
+    module.storageAccount_module,
+    module.containerRegistry_module
+  ]
+}
