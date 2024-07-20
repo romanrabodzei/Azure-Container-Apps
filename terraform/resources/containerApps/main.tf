@@ -157,10 +157,10 @@ resource "azurerm_container_app_environment" "this_resource" {
 
 resource "azurerm_container_app_environment_storage" "this_resource" {
   name                         = var.storageAccountName
-  container_app_environment_id = azurerm_container_app_environment.example.id
+  container_app_environment_id = azurerm_container_app_environment.this_resource.id
   account_name                 = var.storageAccountName
   share_name                   = "fileshare"
-  access_key                   = azurerm_storage_account.this_resource.primary_access_key
+  access_key                   = data.azurerm_storage_account.this_resource.primary_access_key
   access_mode                  = "ReadWrite"
 }
 
