@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240710
+    Version    : 1.0.240729
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -50,16 +50,16 @@ param storageAccountName string = 'az${deploymentEnvironment}cappstg'
 param containerRegistryName string = 'az${deploymentEnvironment}cappacr'
 
 @description('Name of the application, used for the deployment.')
-param applicationName string = 'filebrowser'
-param applicationImageToImport string = 'docker.io/hurlenko/filebrowser:latest'
+param applicationName string = 'transmission'
+param applicationImageToImport string = 'docker.io/romanrabodzei/${applicationName}:latest'
 @description('DockerHub username.')
 @secure()
 param DockerHubUserName string
 @description('DockerHub token.')
 @secure()
 param DockerHubToken string
-param applicationPort int = 8080
-param applicationFolder string = 'data'
+param applicationPort int = 9090
+param applicationFolders array = ['incompleted', 'completed']
 
 @description('Name of the Azure Container Apps.')
 param containerAppsName string = 'az-${deploymentEnvironment}-capp'
@@ -202,7 +202,7 @@ module containerApps_module './resources/containerApps.bicep' = {
     containerAppsName: '${containerAppsName}-${applicationName}'
     containerAppsImage: '${applicationName}:latest'
     containerAppsPort: applicationPort
-    containerAppsFolder: applicationFolder
+    containerAppsFolders: applicationFolders
     containerAppsManagedEnvironmentName: containerAppsManagedEnvironmentName
     containerRegistryResourceGroupName: resourceGroup_resource.name
     containerRegistryName: containerRegistryName

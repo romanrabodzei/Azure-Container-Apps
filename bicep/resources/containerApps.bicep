@@ -7,7 +7,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240622
+    Version    : 1.0.240729
 */
 
 /// deploymentScope
@@ -20,7 +20,7 @@ param containerAppsManagedEnvironmentName string
 param containerAppsName string
 param containerAppsImage string
 param containerAppsPort int
-param containerAppsFolder string
+param containerAppsFolders array
 
 /// virtualNetworkParameters
 param virtualNetworkResourceGroupName string
@@ -171,8 +171,13 @@ resource containerApps_resource 'Microsoft.App/containerApps@2024-03-01' = {
           }
           volumeMounts: [
             {
-              mountPath: '/${containerAppsFolder}'
-              volumeName: containerAppsFolder
+              mountPath: '/${containerAppsFolders[0]}'
+              volumeName: containerAppsFolders[0]
+            }
+
+            {
+              mountPath: '/${containerAppsFolders[1]}'
+              volumeName: containerAppsFolders[1]
             }
           ]
         }
@@ -183,7 +188,12 @@ resource containerApps_resource 'Microsoft.App/containerApps@2024-03-01' = {
       }
       volumes: [
         {
-          name: containerAppsFolder
+          name: containerAppsFolders[0]
+          storageName: storageAccount_resource.name
+          storageType: 'AzureFile'
+        }
+        {
+          name: containerAppsFolders[1]
           storageName: storageAccount_resource.name
           storageType: 'AzureFile'
         }
