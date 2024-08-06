@@ -7,106 +7,8 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240719
+    Version    : 1.0.240805
 */
-
-/// variables
-variable "deploymentResourceGroupName" {
-  type        = string
-  description = "Deployment resource group name."
-}
-
-variable "deploymentLocation" {
-  type        = string
-  description = "The location where the resources will be deployed."
-}
-
-variable "containerAppsManagedEnvironmentName" {
-  type        = string
-  description = "The name of the managed environment."
-}
-
-variable "containerAppsName" {
-  type        = string
-  description = "The name of the container app."
-}
-
-variable "containerAppsImage" {
-  type        = string
-  description = "The image of the container app."
-}
-
-variable "containerAppsPort" {
-  type        = number
-  description = "The ports of the container app."
-}
-
-variable "containerAppsFolder" {
-  type        = string
-  description = "The folder of the container app."
-}
-
-variable "virtualNetworkResourceGroupName" {
-  type        = string
-  description = "The resource group name of the virtual network."
-}
-
-variable "virtualNetworkName" {
-  type        = string
-  description = "The name of the virtual network."
-}
-
-variable "virtualNetworkSubnetName" {
-  type        = string
-  description = "The name of the subnet."
-}
-
-variable "containerRegistryResourceGroupName" {
-  type        = string
-  description = "The resource group name of the container registry."
-}
-
-variable "containerRegistryName" {
-  type        = string
-  description = "The name of the container registry."
-}
-
-variable "storageAccountResourceGroupName" {
-  type        = string
-  description = "The resource group name of the storage account."
-}
-
-variable "storageAccountName" {
-  type        = string
-  description = "The name of the storage account."
-}
-
-variable "userAssignedIdentityResourceGroupName" {
-  type        = string
-  description = "The resource group name of the user assigned identity."
-}
-
-variable "userAssignedIdentityName" {
-  type        = string
-  description = "The name of the user assigned identity."
-}
-
-variable "logAnalyticsWorkspaceResourceGroupName" {
-  type        = string
-  description = "The resource group name of the log analytics workspace."
-}
-
-variable "logAnalyticsWorkspaceName" {
-  type        = string
-  description = "The name of the log analytics workspace."
-}
-
-/// tags
-variable "tags" {
-  type        = map(string)
-  description = "A mapping of tags to assign to the resource."
-  default     = {}
-}
 
 /// resource
 data "azurerm_virtual_network" "this_resource" {
@@ -155,11 +57,20 @@ resource "azurerm_container_app_environment" "this_resource" {
   }
 }
 
-resource "azurerm_container_app_environment_storage" "this_resource" {
-  name                         = var.storageAccountName
+resource "azurerm_container_app_environment_storage" "this_resource_share01" {
+  name                         = "${var.storageAccountName}-${var.containerAppsFolder[0]}"
   container_app_environment_id = azurerm_container_app_environment.this_resource.id
   account_name                 = var.storageAccountName
-  share_name                   = "fileshare"
+  share_name                   = var.containerAppsFolder[0]
+  access_key                   = data.azurerm_storage_account.this_resource.primary_access_key
+  access_mode                  = "ReadWrite"
+}
+
+resource "azurerm_container_app_environment_storage" "this_resource_share02" {
+  name                         = "${var.storageAccountName}-${var.containerAppsFolder[1]}"
+  container_app_environment_id = azurerm_container_app_environment.this_resource.id
+  account_name                 = var.storageAccountName
+  share_name                   = var.containerAppsFolder[1]
   access_key                   = data.azurerm_storage_account.this_resource.primary_access_key
   access_mode                  = "ReadWrite"
 }
@@ -191,18 +102,27 @@ resource "azurerm_container_app" "this_resource" {
     container {
       name   = var.containerAppsName
       image  = "${data.azurerm_container_registry.this_resource.login_server}/${var.containerAppsImage}"
-      cpu    = 0.25
-      memory = "0.5Gi"
+      cpu    = 1.0
+      memory = "2.0Gi"
       volume_mounts {
-        name = var.containerAppsFolder
-        path = var.containerAppsFolder
+        name = var.containerAppsFolder[0]
+        path = "/${var.containerAppsFolder[0]}"
+      }
+      volume_mounts {
+        name = var.containerAppsFolder[1]
+        path = "/${var.containerAppsFolder[1]}"
       }
     }
     min_replicas = 1
     max_replicas = 3
     volume {
-      name         = var.containerAppsFolder
-      storage_name = data.azurerm_storage_account.this_resource.name
+      name         = var.containerAppsFolder[0]
+      storage_name = azurerm_container_app_environment_storage.this_resource_share01.name
+      storage_type = "AzureFile"
+    }
+    volume {
+      name         = var.containerAppsFolder[1]
+      storage_name = azurerm_container_app_environment_storage.this_resource_share02.name
       storage_type = "AzureFile"
     }
   }

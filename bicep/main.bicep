@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240729
+    Version    : 1.0.240805
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -58,7 +58,7 @@ param DockerHubUserName string
 @description('DockerHub token.')
 @secure()
 param DockerHubToken string
-param applicationPort int = 9090
+param applicationPort int = 8080
 param applicationFolders array = ['incompleted', 'completed']
 
 @description('Name of the Azure Container Apps.')
@@ -68,7 +68,7 @@ param containerAppsName string = 'az-${deploymentEnvironment}-capp'
 param containerAppsManagedEnvironmentName string = 'az-${deploymentEnvironment}-capp-env'
 
 /// virtual network
-param virtualNetworkName string = 'az-${deploymentEnvironment}-capp--vnet'
+param virtualNetworkName string = 'az-${deploymentEnvironment}-capp-vnet'
 var virtualNetworkAddressPrefix = '10.0.0.0/22'
 
 var privateEndpointSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'pe-subnet')
@@ -83,10 +83,12 @@ var containerAppsSecurityGroupName = '${containerAppsSubnetName}-nsg'
 param networkIsolation bool = false
 
 /// tags
-param tagKey string = 'environment'
 param tagValue string = deploymentEnvironment
-var tags = {
-  '${tagKey}': tagValue
+param tags object = {
+  project: 'container apps'
+  environment: tagValue
+  'deployment date': utcNow('yyyy-MM-dd')
+  'review date': dateTimeAdd(utcNow('yyyy-MM-dd'), 'P6M', 'yyyy-MM-dd')
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -152,6 +154,7 @@ module storageAccount_module './resources/storageAccount.bicep' = {
   params: {
     location: deploymentLocation
     storageAccountName: storageAccountName
+    storageAccountFileShareName: applicationFolders
     networkIsolation: networkIsolation
     virtualNetworkResourceGroupName: resourceGroup_resource.name
     virtualNetworkName: virtualNetworkName

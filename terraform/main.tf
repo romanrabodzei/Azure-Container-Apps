@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240710
+    Version    : 1.0.240805
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -28,7 +28,12 @@ locals {
   containerAppsSubnetAddressPrefix    = cidrsubnet(var.virtualNetworkAddressPrefix, 1, 0)
   containerAppsSecurityGroupName      = "${local.containerAppsSubnetName}-nsg"
   tagValue                            = var.tagValue == "" ? var.deploymentEnvironment : var.tagValue
-  tags                                = { "${var.tagKey}" : local.tagValue }
+  tags = {
+    "project"         = "container apps"
+    "environment"     = local.tagValue
+    "deployment date" = formatdate("YYYY-MM-DD", timestamp())
+    "review date"     = formatdate("YYYY-MM-DD", timeadd(timestamp(), "4380h"))
+  }
 }
 
 variable "deploymentLocation" {
@@ -88,13 +93,13 @@ variable "containerRegistryName" {
 variable "applicationName" {
   type        = string
   description = "The name of the application."
-  default     = "filebrowser"
+  default     = "transmission"
 }
 
 variable "applicationImageToImport" {
   type        = string
   description = "The image to import."
-  default     = "docker.io/hurlenko/filebrowser:latest"
+  default     = "docker.io/romanrabodzei/transmission:latest"
 }
 
 variable "DockerHubUserName" {
@@ -116,9 +121,9 @@ variable "applicationPort" {
 }
 
 variable "applicationFolder" {
-  type        = string
+  type        = list(string)
   description = "The folder where the application is stored."
-  default     = "data"
+  default     = ["incompleted", "completed"]
 }
 
 variable "containerAppsName" {
@@ -149,11 +154,6 @@ variable "networkIsolation" {
   type        = bool
   description = "Isolation from internet for the resources."
   default     = false
-}
-
-variable "tagKey" {
-  type    = string
-  default = "environment"
 }
 
 variable "tagValue" {
@@ -209,6 +209,7 @@ module "storageAccount_module" {
   deploymentResourceGroupName            = azurerm_resource_group.this_resource.name
   deploymentLocation                     = var.deploymentLocation
   storageAccountName                     = local.storageAccountName
+  storageAccountFileShareName            = var.applicationFolder
   networkIsolation                       = var.networkIsolation
   virtualNetworkResourceGroupName        = azurerm_resource_group.this_resource.name
   virtualNetworkName                     = local.virtualNetworkName
