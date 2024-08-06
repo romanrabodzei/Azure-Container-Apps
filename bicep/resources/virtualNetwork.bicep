@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240703
+    Version    : 1.0.240805
 */
 
 /// deployment scope
@@ -40,6 +40,7 @@ resource virtualNetwork_resource 'Microsoft.Network/virtualNetworks@2023-11-01' 
       ]
     }
   }
+  @batchSize(1)
   resource subnet 'subnets' = [
     for (virtualSubnetName, i) in virtualSubnetNames: {
       name: toLower(virtualSubnetName)
@@ -118,13 +119,17 @@ resource send_data_to_logAnalyticsWorkspace_networkSecurityGroup 'Microsoft.Insi
     name: toLower('send-data-to-${logAnalyticsWorkspaceName}')
     properties: {
       workspaceId: logAnalytics_resource.id
-      logs: []
-      metrics: [
+      logs: [
         {
-          category: 'AllMetrics'
+          category: 'NetworkSecurityGroupEvent'
+          enabled: true
+        }
+        {
+          category: 'NetworkSecurityGroupRuleCounter'
           enabled: true
         }
       ]
+      metrics: []
     }
   }
 ]

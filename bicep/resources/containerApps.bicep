@@ -7,7 +7,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240622
+    Version    : 1.0.240805
 */
 
 /// deploymentScope
@@ -20,7 +20,7 @@ param containerAppsManagedEnvironmentName string
 param containerAppsName string
 param containerAppsImage string
 param containerAppsPort int
-param containerAppsFolder string
+param containerAppsFolders array
 
 /// virtualNetworkParameters
 param virtualNetworkResourceGroupName string
@@ -113,13 +113,24 @@ resource managedEnvironment_resource 'Microsoft.App/managedEnvironments@2024-03-
       }
     }
   }
-  resource storage 'storages' = {
-    name: storageAccount_resource.name
+  resource storage_share01 'storages' = {
+    name: '${storageAccount_resource.name}-${containerAppsFolders[0]}'
     properties: {
       azureFile: {
         accountName: storageAccount_resource.name
         accountKey: storageAccount_resource.listKeys().keys[0].value
-        shareName: 'fileshare'
+        shareName: containerAppsFolders[0]
+        accessMode: 'ReadWrite'
+      }
+    }
+  }
+  resource storage_share_02 'storages' = {
+    name: '${storageAccount_resource.name}-${containerAppsFolders[1]}'
+    properties: {
+      azureFile: {
+        accountName: storageAccount_resource.name
+        accountKey: storageAccount_resource.listKeys().keys[0].value
+        shareName: containerAppsFolders[1]
         accessMode: 'ReadWrite'
       }
     }
@@ -166,13 +177,18 @@ resource containerApps_resource 'Microsoft.App/containerApps@2024-03-01' = {
           image: toLower('${containerRegistry_resource.properties.loginServer}/${containerAppsImage}')
           resources: {
             #disable-next-line BCP036
-            cpu: '0.25'
-            memory: '.5Gi'
+            cpu: '1.0'
+            memory: '2.0Gi'
           }
           volumeMounts: [
             {
-              mountPath: '/${containerAppsFolder}'
-              volumeName: containerAppsFolder
+              volumeName: containerAppsFolders[0]
+              mountPath: '/${containerAppsFolders[0]}'
+            }
+
+            {
+              volumeName: containerAppsFolders[1]
+              mountPath: '/${containerAppsFolders[1]}'
             }
           ]
         }
@@ -183,8 +199,13 @@ resource containerApps_resource 'Microsoft.App/containerApps@2024-03-01' = {
       }
       volumes: [
         {
-          name: containerAppsFolder
-          storageName: storageAccount_resource.name
+          name: containerAppsFolders[0]
+          storageName: '${storageAccount_resource.name}-${containerAppsFolders[0]}'
+          storageType: 'AzureFile'
+        }
+        {
+          name: containerAppsFolders[1]
+          storageName: '${storageAccount_resource.name}-${containerAppsFolders[1]}'
           storageType: 'AzureFile'
         }
       ]

@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240707
+    Version    : 1.0.240805
 */
 
 /// deploymentScope
@@ -18,7 +18,7 @@ param location string
 param storageAccountName string
 param storageAccountKind string = 'StorageV2'
 param storageAccountType string = 'Standard_RAGZRS'
-param storageAccountFileShareName string = 'fileshare'
+param storageAccountFileShareName array
 
 /// virtualNetworkParameters
 param networkIsolation bool = false
@@ -63,14 +63,14 @@ resource storageAccount_resource 'Microsoft.Storage/storageAccounts@2023-05-01' 
   resource fileshare 'fileServices' = {
     name: 'default'
     properties: {}
-    resource default 'shares' = {
-      name: storageAccountFileShareName
+    resource default 'shares' = [for item in storageAccountFileShareName: {
+      name: item
       properties: {
         accessTier: 'Hot'
         enabledProtocols: 'SMB'
         shareQuota: 1024
       }
-    }
+    }]
   }
 }
 
