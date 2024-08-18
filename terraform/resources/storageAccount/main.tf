@@ -16,10 +16,10 @@ data "azurerm_virtual_network" "this_resource" {
 }
 
 data "azurerm_subnet" "subnets" {
-  count               = length(var.virtualNetworkSubnetNames)
-  name                = var.virtualNetworkSubnetNames[count.index]
+  count                = length(var.virtualNetworkSubnetNames)
+  name                 = var.virtualNetworkSubnetNames[count.index]
   virtual_network_name = var.virtualNetworkName
-  resource_group_name = var.virtualNetworkResourceGroupName
+  resource_group_name  = var.virtualNetworkResourceGroupName
 }
 
 resource "azurerm_storage_account" "this_resource" {
@@ -34,8 +34,8 @@ resource "azurerm_storage_account" "this_resource" {
   shared_access_key_enabled     = true
   public_network_access_enabled = true
   network_rules {
-    bypass         = ["AzureServices"]
-    default_action = "Deny"
+    bypass                     = ["AzureServices"]
+    default_action             = "Deny"
     virtual_network_subnet_ids = local.virtual_network_subnet_ids
   }
   tags = var.tags
