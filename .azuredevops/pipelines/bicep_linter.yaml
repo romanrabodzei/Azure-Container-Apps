@@ -3,7 +3,7 @@
 #
 # .NOTES
 #     Author     : Roman Rabodzei
-#     Version    : 1.0.240710
+#     Version    : 1.0.240817
 #
 #             _
 #         .__(.)<  (MEOW)
@@ -12,8 +12,7 @@
 
 name: "Bicep_Linter_pipeline"
 
-trigger:
-  none
+trigger: none
 
 pr:
   branches:
@@ -22,17 +21,17 @@ pr:
 
 variables:
   - name: deploymentLocation
-    value: 'west europe'
+    value: "west europe"
   - name: deploymentEnvironment
-    value: 'linter'
+    value: "linter"
 
 pool:
   vmImage: ubuntu-latest
 
 jobs:
   - deployment: bicep_linter
-    displayName:  Bicep Linter job
-    environment: 'linter'
+    displayName: Bicep Linter job
+    environment: "linter"
     strategy:
       runOnce:
         deploy:
@@ -43,21 +42,21 @@ jobs:
 
             # Run the Bicep linter on the Bicep templates to verify the syntax
             - task: CmdLine@2
-              displayName: 'Build Bicep files'
+              displayName: "Build Bicep files"
               inputs:
                 script: |
                   az bicep build --file ./main.bicep
                 failOnStderr: true
-                workingDirectory: '$(system.defaultWorkingDirectory)/bicep'
+                workingDirectory: "$(system.defaultWorkingDirectory)/bicep"
 
             # Run preflight validation of the Bicep templates
             - task: AzureCLI@2
-              displayName: 'Preflight Validation'
+              displayName: "Preflight Validation"
               inputs:
                 azureSubscription: $(subscription)
-                scriptType: 'bash'
-                scriptLocation: 'inlineScript'
+                scriptType: "bash"
+                scriptLocation: "inlineScript"
                 inlineScript: |
-                  az deployment sub validate --name "$(Build.BuildId)" --location "$(deploymentLocation)" --template-file ./main.bicep --parameters deploymentEnvironment="$(deploymentEnvironment)" DockerHubUserName="$(DOCKERHUB_USERNAME)" DockerHubToken="$(DOCKERHUB_PASSWORD)"
+                  az deployment sub validate --name "$(Build.BuildId)" --location "$(deploymentLocation)" --template-file ./main.bicep --parameters deploymentEnvironment="$(deploymentEnvironment)"
                 failOnStandardError: true
-                workingDirectory: '$(system.defaultWorkingDirectory)/bicep'
+                workingDirectory: "$(system.defaultWorkingDirectory)/bicep"

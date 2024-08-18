@@ -3,7 +3,7 @@
 #
 # .NOTES
 #     Author     : Roman Rabodzei
-#     Version    : 1.0.240719
+#     Version    : 1.0.240817
 #
 #             _
 #         .__(.)<  (MEOW)
@@ -47,7 +47,7 @@ jobs:
 
       - name: Preview changes
         run: |
-          az deployment sub what-if --name "Bicep_Deployment_workflow_1.0.${{ github.run_number }}" --location "${{ inputs.deploymentLocation }}" --template-file ./main.bicep --parameters deploymentEnvironment="${{ inputs.deploymentEnvironment }}" DockerHubUserName=${{ secrets.DOCKERHUB_USERNAME }} DockerHubToken=${{ secrets.DOCKERHUB_PASSWORD }}
+          az deployment sub what-if --name "Bicep_Deployment_workflow_1.0.${{ github.run_number }}" --location "${{ inputs.deploymentLocation }}" --template-file ./main.bicep --parameters deploymentEnvironment="${{ inputs.deploymentEnvironment }}"
         working-directory: bicep
 
   bicep_deploy:
@@ -69,5 +69,5 @@ jobs:
 
       - name: Deploy templates
         run: |
-          az deployment sub create --name "Bicep_Deployment_workflow_1.0.${{ github.run_number }}" --location "${{ inputs.deploymentLocation }}" --template-file ./main.bicep --parameters deploymentEnvironment="${{ inputs.deploymentEnvironment }}" DockerHubUserName=${{ secrets.DOCKERHUB_USERNAME }} DockerHubToken=${{ secrets.DOCKERHUB_PASSWORD }}
+          az deployment sub create --name "Bicep_Deployment_workflow_1.0.${{ github.run_number }}" --location "${{ inputs.deploymentLocation }}" --template-file ./main.bicep --parameters deploymentEnvironment="${{ inputs.deploymentEnvironment }}"
         working-directory: bicep
