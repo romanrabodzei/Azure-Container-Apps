@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 /// variables
@@ -42,12 +42,6 @@ variable "storageAccountFileShareName" {
   description = "The name of the file share."
 }
 
-variable "networkIsolation" {
-  type        = bool
-  description = "Enable network isolation."
-  default     = true
-}
-
 variable "virtualNetworkResourceGroupName" {
   type        = string
   description = "The name of the resource group where the virtual network is located."
@@ -60,10 +54,10 @@ variable "virtualNetworkName" {
   default     = ""
 }
 
-variable "virtualNetworkSubnetName" {
-  type        = string
-  description = "The name of the subnet."
-  default     = ""
+variable "virtualNetworkSubnetNames" {
+  type        = list(string)
+  description = "The name of the subnets."
+  default     = []
 }
 
 variable "userAssignedIdentityResourceGroupName" {
@@ -97,6 +91,7 @@ variable "tags" {
 
 /// locals
 locals {
-  fileSharePrivateDnsZoneName = "privatelink_file_core_windows_net"
-  queuePrivateDnsZoneName     = "privatelink_queue_core_windows_net"
+  virtual_network_subnet_ids = [
+    for subnet in data.azurerm_subnet.subnets : subnet.id
+  ]
 }

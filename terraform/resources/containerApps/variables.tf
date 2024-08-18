@@ -41,9 +41,35 @@ variable "containerAppsPort" {
   description = "The ports of the container app."
 }
 
+variable "containerRegistry" {
+  type        = string
+  description = "The name of the container registry."
+}
+
+
 variable "containerAppsFolder" {
   type        = list(string)
   description = "The folder of the container app."
+}
+
+variable "cpuCore" {
+  description = "Number of CPU cores the container can use. Can be with a maximum of two decimals."
+  type        = string
+  default     = "1.0"
+  validation {
+    condition     = contains(["0.25", "0.5", "0.75", "1.0", "1.25", "1.5", "1.75", "2.0"], var.cpuCore)
+    error_message = "CPU core must be one of the allowed values: 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0."
+  }
+}
+
+variable "memorySize" {
+  description = "Amount of memory (in gibibytes, GiB) allocated to the container up to 4GiB. Can be with a maximum of two decimals. Ratio with CPU cores must be equal to 2."
+  type        = string
+  default     = "2.0"
+  validation {
+    condition     = contains(["0.5", "1.0", "1.5", "2.0", "3.0", "3.5", "4.0"], var.memorySize)
+    error_message = "Memory size must be one of the allowed values: 0.5, 1.0, 1.5, 2.0, 3.0, 3.5, 4.0."
+  }
 }
 
 variable "virtualNetworkResourceGroupName" {
@@ -59,16 +85,6 @@ variable "virtualNetworkName" {
 variable "virtualNetworkSubnetName" {
   type        = string
   description = "The name of the subnet."
-}
-
-variable "containerRegistryResourceGroupName" {
-  type        = string
-  description = "The resource group name of the container registry."
-}
-
-variable "containerRegistryName" {
-  type        = string
-  description = "The name of the container registry."
 }
 
 variable "storageAccountResourceGroupName" {

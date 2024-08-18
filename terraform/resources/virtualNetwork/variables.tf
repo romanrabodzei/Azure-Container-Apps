@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 /// variable
@@ -66,7 +66,7 @@ variable "tags" {
 locals {
   networkSecurityGroups = [
     "containerApps",
-    "privateEndpoints"
+    # "infrastructure"
   ]
   securityRules = {
     containerApps = [{
@@ -84,6 +84,6 @@ locals {
       sourceAddressPrefixes : []
       destinationAddressPrefixes : []
     }]
-    privateEndpoints = []
+    # infrastructure = []
   }
 }

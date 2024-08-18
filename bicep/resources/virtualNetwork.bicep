@@ -64,7 +64,7 @@ resource virtualNetwork_resource 'Microsoft.Network/virtualNetworks@2023-11-01' 
 
 var networkSecurityGroups = [
   'containerApps'
-  // 'privateEndpoints'
+  // 'infrastructure'
 ]
 
 var securityRules = {
@@ -87,7 +87,7 @@ var securityRules = {
       }
     }
   ]
-  // privateEndpoints: []
+  // infrastructure: []
 }
 
 resource networkSecurityGroup_resource 'Microsoft.Network/networkSecurityGroups@2023-11-01' = [

@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -17,17 +17,16 @@ locals {
   logAnalyticsWorkspaceName           = var.logAnalyticsWorkspaceName == "" ? "az-${var.deploymentEnvironment}-capp-law" : var.logAnalyticsWorkspaceName
   userAssignedIdentityName            = var.userAssignedIdentityName == "" ? "az-${var.deploymentEnvironment}-capp-mi" : var.userAssignedIdentityName
   storageAccountName                  = var.storageAccountName == "" ? "az${var.deploymentEnvironment}cappstg" : var.storageAccountName
-  containerRegistryName               = var.containerRegistryName == "" ? "az${var.deploymentEnvironment}cappacr" : var.containerRegistryName
   containerAppsName                   = var.containerAppsName == "" ? "az-${var.deploymentEnvironment}-capp" : var.containerAppsName
   containerAppsManagedEnvironmentName = var.containerAppsManagedEnvironmentName == "" ? "az-${var.deploymentEnvironment}-capp-env" : var.containerAppsManagedEnvironmentName
   virtualNetworkName                  = var.virtualNetworkName == "" ? "az-${var.deploymentEnvironment}-capp-vnet" : var.virtualNetworkName
-  privateEndpointSubnetName           = replace(local.containerAppsResourceGroupName, "capp-rg", "pe-subnet")
-  privateEndpointSubnetAddressPrefix  = cidrsubnet(var.virtualNetworkAddressPrefix, 2, 3)
-  privateEndpointSecurityGroupName    = "${local.privateEndpointSubnetName}-nsg"
-  containerAppsSubnetName             = replace(local.containerAppsResourceGroupName, "capp-rg", "capp-subnet")
-  containerAppsSubnetAddressPrefix    = cidrsubnet(var.virtualNetworkAddressPrefix, 1, 0)
-  containerAppsSecurityGroupName      = "${local.containerAppsSubnetName}-nsg"
-  tagValue                            = var.tagValue == "" ? var.deploymentEnvironment : var.tagValue
+  # infrastructureSubnetName            = replace(local.containerAppsResourceGroupName, "capp-rg", "pe-subnet")
+  # infrastructureSubnetAddressPrefix   = cidrsubnet(var.virtualNetworkAddressPrefix, 2, 3)
+  # infrastructureSecurityGroupName     = "${local.infrastructureSubnetName}-nsg"
+  containerAppsSubnetName          = replace(local.containerAppsResourceGroupName, "capp-rg", "capp-subnet")
+  containerAppsSubnetAddressPrefix = cidrsubnet(var.virtualNetworkAddressPrefix, 1, 0)
+  containerAppsSecurityGroupName   = "${local.containerAppsSubnetName}-nsg"
+  tagValue                         = var.tagValue == "" ? var.deploymentEnvironment : var.tagValue
   tags = {
     "project"         = "container apps"
     "environment"     = local.tagValue
@@ -84,34 +83,16 @@ variable "storageAccountName" {
   default     = ""
 }
 
-variable "containerRegistryName" {
-  type        = string
-  description = "The name of the container registry."
-  default     = ""
-}
-
 variable "applicationName" {
   type        = string
   description = "The name of the application."
-  default     = "transmission"
+  default     = "filebrowser"
 }
 
-variable "applicationImageToImport" {
+variable "applicationImageToPull" {
   type        = string
   description = "The image to import."
-  default     = "docker.io/romanrabodzei/transmission:latest"
-}
-
-variable "DockerHubUserName" {
-  type        = string
-  description = "Docker Hub username."
-  sensitive   = true
-}
-
-variable "DockerHubToken" {
-  type        = string
-  description = "Docker Hub token."
-  sensitive   = true
+  default     = "docker.io/hurlenko"
 }
 
 variable "applicationPort" {
@@ -123,7 +104,7 @@ variable "applicationPort" {
 variable "applicationFolder" {
   type        = list(string)
   description = "The folder where the application is stored."
-  default     = ["incompleted", "completed"]
+  default     = ["data"]
 }
 
 variable "containerAppsName" {
@@ -148,12 +129,6 @@ variable "virtualNetworkAddressPrefix" {
   type        = string
   description = "The address prefix for the virtual network."
   default     = "10.0.0.0/22"
-}
-
-variable "networkIsolation" {
-  type        = bool
-  description = "Isolation from internet for the resources."
-  default     = false
 }
 
 variable "tagValue" {
@@ -195,9 +170,9 @@ module "network_module" {
   deploymentLocation                     = var.deploymentLocation
   virtualNetworkName                     = local.virtualNetworkName
   virtualNetworkAddressPrefix            = var.virtualNetworkAddressPrefix
-  virtualSubnetNames                     = [local.containerAppsSubnetName, local.privateEndpointSubnetName]
-  virtualNetworkSubnetAddressPrefixes    = [local.containerAppsSubnetAddressPrefix, local.privateEndpointSubnetAddressPrefix]
-  networkSecurityGroupNames              = [local.containerAppsSecurityGroupName, local.privateEndpointSecurityGroupName]
+  virtualSubnetNames                     = [local.containerAppsSubnetName]          #, local.infrastructureSubnetName]
+  virtualNetworkSubnetAddressPrefixes    = [local.containerAppsSubnetAddressPrefix] #, local.infrastructureSubnetAddressPrefix]
+  networkSecurityGroupNames              = [local.containerAppsSecurityGroupName]   #, local.infrastructureSecurityGroupName]
   logAnalyticsWorkspaceResourceGroupName = local.containerAppsResourceGroupName
   logAnalyticsWorkspaceName              = local.logAnalyticsWorkspaceName
   tags                                   = local.tags
@@ -210,10 +185,9 @@ module "storageAccount_module" {
   deploymentLocation                     = var.deploymentLocation
   storageAccountName                     = local.storageAccountName
   storageAccountFileShareName            = var.applicationFolder
-  networkIsolation                       = var.networkIsolation
   virtualNetworkResourceGroupName        = azurerm_resource_group.this_resource.name
   virtualNetworkName                     = local.virtualNetworkName
-  virtualNetworkSubnetName               = local.privateEndpointSubnetName
+  virtualNetworkSubnetNames              = [local.containerAppsSubnetName] #, local.infrastructureSubnetName]
   userAssignedIdentityResourceGroupName  = azurerm_resource_group.this_resource.name
   userAssignedIdentityName               = local.userAssignedIdentityName
   logAnalyticsWorkspaceResourceGroupName = azurerm_resource_group.this_resource.name
@@ -225,43 +199,16 @@ module "storageAccount_module" {
     module.network_module
   ]
 }
-
-module "containerRegistry_module" {
-  source                                 = "./resources/containerRegistry"
-  deploymentResourceGroupName            = azurerm_resource_group.this_resource.name
-  deploymentLocation                     = var.deploymentLocation
-  containerRegistryName                  = local.containerRegistryName
-  applicationName                        = var.applicationName
-  applicationImageToImport               = var.applicationImageToImport
-  DockerHubUserName                      = base64encode(var.DockerHubUserName)
-  DockerHubToken                         = base64encode(var.DockerHubToken)
-  networkIsolation                       = var.networkIsolation
-  virtualNetworkResourceGroupName        = azurerm_resource_group.this_resource.name
-  virtualNetworkName                     = local.virtualNetworkName
-  virtualNetworkSubnetName               = local.containerAppsSubnetName
-  userAssignedIdentityResourceGroupName  = azurerm_resource_group.this_resource.name
-  userAssignedIdentityName               = local.userAssignedIdentityName
-  logAnalyticsWorkspaceResourceGroupName = azurerm_resource_group.this_resource.name
-  logAnalyticsWorkspaceName              = local.logAnalyticsWorkspaceName
-  tags                                   = local.tags
-  depends_on = [
-    module.logAnalyticsWorkspace_module,
-    module.managedIdentity_module,
-    module.network_module
-  ]
-}
-
 module "containerApps_module" {
   source                                 = "./resources/containerApps"
   deploymentLocation                     = var.deploymentLocation
   deploymentResourceGroupName            = azurerm_resource_group.this_resource.name
   containerAppsName                      = local.containerAppsName
   containerAppsImage                     = "${var.applicationName}:latest"
+  containerRegistry                      = var.applicationImageToPull
   containerAppsPort                      = var.applicationPort
   containerAppsFolder                    = var.applicationFolder
   containerAppsManagedEnvironmentName    = local.containerAppsManagedEnvironmentName
-  containerRegistryResourceGroupName     = azurerm_resource_group.this_resource.name
-  containerRegistryName                  = local.containerRegistryName
   userAssignedIdentityResourceGroupName  = azurerm_resource_group.this_resource.name
   userAssignedIdentityName               = local.userAssignedIdentityName
   storageAccountResourceGroupName        = azurerm_resource_group.this_resource.name
@@ -276,7 +223,6 @@ module "containerApps_module" {
     module.logAnalyticsWorkspace_module,
     module.managedIdentity_module,
     module.network_module,
-    module.storageAccount_module,
-    module.containerRegistry_module
+    module.storageAccount_module
   ]
 }
