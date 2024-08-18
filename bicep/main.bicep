@@ -59,9 +59,10 @@ param containerAppsManagedEnvironmentName string = 'az-${deploymentEnvironment}-
 param virtualNetworkName string = 'az-${deploymentEnvironment}-capp-vnet'
 var virtualNetworkAddressPrefix = '10.0.0.0/22'
 
-var privateEndpointSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'pe-subnet')
-var privateEndpointSubnetAddressPrefix = [for i in range(0, 4): cidrSubnet(virtualNetworkAddressPrefix, 24, i)]
-var privateEndpointSecurityGroupName = '${privateEndpointSubnetName}-nsg'
+// uncomment the following lines and lines in the code (121, 125, 129, 148) if you want to deploy a additional subnet.
+// var infrastructureSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'infra-subnet')
+// var infrastructureSubnetAddressPrefix = [for i in range(0, 4): cidrSubnet(virtualNetworkAddressPrefix, 24, i)]
+// var infrastructureSecurityGroupName = '${infrastructureSubnetName}-nsg'
 
 var containerAppsSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'capp-subnet')
 var containerAppsSubnetAddressPrefix = [for i in range(0, 2): cidrSubnet(virtualNetworkAddressPrefix, 23, i)]
@@ -117,15 +118,15 @@ module network_module 'resources/virtualNetwork.bicep' = {
     virtualNetworkAddressPrefix: virtualNetworkAddressPrefix
     virtualSubnetNames: [
       containerAppsSubnetName
-      privateEndpointSubnetName
+      // infrastructureSubnetName
     ]
     virtualNetworkSubnetAddressPrefixes: [
       containerAppsSubnetAddressPrefix[1]
-      privateEndpointSubnetAddressPrefix[1]
+      // infrastructureSubnetAddressPrefix[1]
     ]
     networkSecurityGroupNames: [
       containerAppsSecurityGroupName
-      privateEndpointSecurityGroupName
+      // infrastructureSecurityGroupName
     ]
     logAnalyticsWorkspaceResourceGroupName: resourceGroup_resource.name
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
@@ -142,7 +143,10 @@ module storageAccount_module './resources/storageAccount.bicep' = {
     storageAccountFileShareName: applicationFolders
     virtualNetworkResourceGroupName: resourceGroup_resource.name
     virtualNetworkName: virtualNetworkName
-    virtualNetworkSubnetNames: [privateEndpointSubnetName, containerAppsSubnetName]
+    virtualNetworkSubnetNames: [
+      containerAppsSubnetName
+      // infrastructureSubnetName
+    ]
     userAssignedIdentityResourceGroupName: resourceGroup_resource.name
     userAssignedIdentityName: userAssignedIdentityName
     logAnalyticsWorkspaceResourceGroupName: resourceGroup_resource.name

@@ -54,6 +54,8 @@ var virtualNetworkRules = [
   }
 ]
 
+output virtualNetworkRules array = virtualNetworkRules
+
 resource storageAccount_resource 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: toLower(storageAccountName)
   location: location
