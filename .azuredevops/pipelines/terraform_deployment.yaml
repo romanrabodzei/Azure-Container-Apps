@@ -3,7 +3,7 @@
 #
 # .NOTES
 #     Author     : Roman Rabodzei
-#     Version    : 1.0.240719
+#     Version    : 1.0.240817
 #
 #             _
 #         .__(.)<  (MEOW)
@@ -38,11 +38,11 @@ stages:
           - checkout: self
 
           - task: CmdLine@2
-            displayName: 'Terraform Init'
+            displayName: "Terraform Init"
             inputs:
               script: |
                 terraform init -backend=false
-              workingDirectory: '$(system.defaultWorkingDirectory)/terraform'
+              workingDirectory: "$(system.defaultWorkingDirectory)/terraform"
               failOnStderr: true
 
           - task: AzureCLI@2
@@ -52,7 +52,7 @@ stages:
               scriptType: "bash"
               scriptLocation: "inlineScript"
               inlineScript: |
-                terraform plan -var="deploymentLocation=${{ parameters.deploymentLocation }}" -var="deploymentEnvironment=${{ parameters.deploymentEnvironment }}" -var="DockerHubUserName=$(DOCKERHUB_USERNAME)" -var="DockerHubToken=$(DOCKERHUB_PASSWORD)"
+                terraform plan -var="deploymentLocation=${{ parameters.deploymentLocation }}" -var="deploymentEnvironment=${{ parameters.deploymentEnvironment }}"
               workingDirectory: "$(system.defaultWorkingDirectory)/terraform"
 
   - stage: terraform_deploy
@@ -69,11 +69,11 @@ stages:
                 - checkout: self
 
                 - task: CmdLine@2
-                  displayName: 'Terraform Init'
+                  displayName: "Terraform Init"
                   inputs:
                     script: |
                       terraform init -backend=false
-                    workingDirectory: '$(system.defaultWorkingDirectory)/terraform'
+                    workingDirectory: "$(system.defaultWorkingDirectory)/terraform"
                     failOnStderr: true
 
                 - task: AzureCLI@2
@@ -83,5 +83,5 @@ stages:
                     scriptType: "bash"
                     scriptLocation: "inlineScript"
                     inlineScript: |
-                      terraform apply -var="deploymentLocation=${{ parameters.deploymentLocation }}" -var="deploymentEnvironment=${{ parameters.deploymentEnvironment }}" -var="DockerHubUserName=$(DOCKERHUB_USERNAME)" -var="DockerHubToken=$(DOCKERHUB_PASSWORD)"
+                      terraform apply -var="deploymentLocation=${{ parameters.deploymentLocation }}" -var="deploymentEnvironment=${{ parameters.deploymentEnvironment }}"
                     workingDirectory: "$(system.defaultWorkingDirectory)/terraform"

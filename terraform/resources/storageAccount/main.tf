@@ -6,10 +6,22 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 /// resources
+data "azurerm_virtual_network" "this_resource" {
+  name                = var.virtualNetworkName
+  resource_group_name = var.virtualNetworkResourceGroupName
+}
+
+data "azurerm_subnet" "subnets" {
+  count                = length(var.virtualNetworkSubnetNames)
+  name                 = var.virtualNetworkSubnetNames[count.index]
+  virtual_network_name = var.virtualNetworkName
+  resource_group_name  = var.virtualNetworkResourceGroupName
+}
+
 resource "azurerm_storage_account" "this_resource" {
   name                          = lower(var.storageAccountName)
   location                      = var.deploymentLocation
@@ -18,12 +30,12 @@ resource "azurerm_storage_account" "this_resource" {
   account_kind                  = var.storageAccountKind
   account_tier                  = "Standard"
   min_tls_version               = "TLS1_2"
-  enable_https_traffic_only     = true
   shared_access_key_enabled     = true
-  public_network_access_enabled = var.networkIsolation ? false : true
+  public_network_access_enabled = true
   network_rules {
-    bypass         = ["AzureServices"]
-    default_action = var.networkIsolation ? "Deny" : "Allow"
+    bypass                     = ["AzureServices"]
+    default_action             = "Deny"
+    virtual_network_subnet_ids = local.virtual_network_subnet_ids
   }
   tags = var.tags
 }
@@ -55,85 +67,6 @@ resource "azurerm_role_assignment" "file_data_contributor" {
   role_definition_name = "Storage File Data SMB Share Contributor"
   principal_type       = "ServicePrincipal"
   principal_id         = data.azurerm_user_assigned_identity.this_resource.principal_id
-}
-
-data "azurerm_virtual_network" "this_resource" {
-  name                = var.virtualNetworkName
-  resource_group_name = var.virtualNetworkResourceGroupName
-}
-
-data "azurerm_subnet" "this_resource" {
-  name                 = var.virtualNetworkSubnetName
-  resource_group_name  = var.virtualNetworkResourceGroupName
-  virtual_network_name = data.azurerm_virtual_network.this_resource.name
-}
-
-resource "azurerm_dns_zone" "file_private_connection" {
-  count               = var.networkIsolation ? 1 : 0
-  name                = replace(local.fileSharePrivateDnsZoneName, "_", ".")
-  resource_group_name = var.deploymentResourceGroupName
-  tags                = var.tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "file_private_connection" {
-  count                 = var.networkIsolation ? 1 : 0
-  name                  = replace(local.fileSharePrivateDnsZoneName, "_", "-")
-  resource_group_name   = var.deploymentResourceGroupName
-  private_dns_zone_name = azurerm_dns_zone.file_private_connection[0].name
-  virtual_network_id    = data.azurerm_virtual_network.this_resource.id
-  registration_enabled  = false
-}
-
-resource "azurerm_private_endpoint" "this_resource" {
-  count               = var.networkIsolation ? 1 : 0
-  name                = lower("${var.storageAccountName}-file-pe")
-  location            = var.deploymentLocation
-  resource_group_name = var.deploymentResourceGroupName
-  subnet_id           = data.azurerm_subnet.this_resource.id
-  private_service_connection {
-    name                           = lower("${var.storageAccountName}-file-pe-nic")
-    private_connection_resource_id = azurerm_storage_account.this_resource.id
-    subresource_names              = ["file"]
-    is_manual_connection           = false
-  }
-  private_dns_zone_group {
-    name                 = replace(local.fileSharePrivateDnsZoneName, "_", ".")
-    private_dns_zone_ids = [azurerm_dns_zone.file_private_connection[0].id]
-  }
-}
-
-resource "azurerm_dns_zone" "queue_private_connection" {
-  count               = var.networkIsolation ? 1 : 0
-  name                = replace(local.queuePrivateDnsZoneName, "_", ".")
-  resource_group_name = var.deploymentResourceGroupName
-  tags                = var.tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "queue_private_connection" {
-  count                 = var.networkIsolation ? 1 : 0
-  name                  = replace(local.queuePrivateDnsZoneName, "_", "-")
-  resource_group_name   = var.deploymentResourceGroupName
-  private_dns_zone_name = azurerm_dns_zone.queue_private_connection[0].name
-  virtual_network_id    = data.azurerm_virtual_network.this_resource.id
-  registration_enabled  = false
-}
-
-resource "azurerm_private_endpoint" "queue_private_connection" {
-  count               = var.networkIsolation ? 1 : 0
-  name                = lower("${var.storageAccountName}-queue-pe")
-  location            = var.deploymentLocation
-  resource_group_name = var.deploymentResourceGroupName
-  subnet_id           = data.azurerm_subnet.this_resource.id
-  private_service_connection {
-    name                           = lower("${var.storageAccountName}-queue-pe-nic")
-    private_connection_resource_id = azurerm_storage_account.this_resource.id
-    subresource_names              = ["queue"]
-    is_manual_connection           = false
-  }
-  private_dns_zone_group {
-    name                 = replace(local.queuePrivateDnsZoneName, "_", ".")
-    private_dns_zone_ids = [azurerm_dns_zone.queue_private_connection[0].id]
-  }
 }
 
 data "azurerm_log_analytics_workspace" "this_resource" {

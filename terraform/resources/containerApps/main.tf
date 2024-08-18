@@ -7,7 +7,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 /// resource
@@ -38,11 +38,6 @@ data "azurerm_storage_account" "this_resource" {
   resource_group_name = var.storageAccountResourceGroupName
 }
 
-data "azurerm_container_registry" "this_resource" {
-  name                = var.containerRegistryName
-  resource_group_name = var.deploymentResourceGroupName
-}
-
 resource "azurerm_container_app_environment" "this_resource" {
   name                       = var.containerAppsManagedEnvironmentName
   location                   = var.deploymentLocation
@@ -57,20 +52,12 @@ resource "azurerm_container_app_environment" "this_resource" {
   }
 }
 
-resource "azurerm_container_app_environment_storage" "this_resource_share01" {
-  name                         = "${var.storageAccountName}-${var.containerAppsFolder[0]}"
+resource "azurerm_container_app_environment_storage" "this_resource_share" {
+  count                        = length(var.containerAppsFolder)
+  name                         = "${var.storageAccountName}-${var.containerAppsFolder[count.index]}"
   container_app_environment_id = azurerm_container_app_environment.this_resource.id
   account_name                 = var.storageAccountName
-  share_name                   = var.containerAppsFolder[0]
-  access_key                   = data.azurerm_storage_account.this_resource.primary_access_key
-  access_mode                  = "ReadWrite"
-}
-
-resource "azurerm_container_app_environment_storage" "this_resource_share02" {
-  name                         = "${var.storageAccountName}-${var.containerAppsFolder[1]}"
-  container_app_environment_id = azurerm_container_app_environment.this_resource.id
-  account_name                 = var.storageAccountName
-  share_name                   = var.containerAppsFolder[1]
+  share_name                   = var.containerAppsFolder[count.index]
   access_key                   = data.azurerm_storage_account.this_resource.primary_access_key
   access_mode                  = "ReadWrite"
 }
@@ -92,38 +79,33 @@ resource "azurerm_container_app" "this_resource" {
     }
     target_port = var.containerAppsPort
   }
-  registry {
-    identity = data.azurerm_user_assigned_identity.this_resource.id
-    server   = data.azurerm_container_registry.this_resource.login_server
-  }
   container_app_environment_id = azurerm_container_app_environment.this_resource.id
 
   template {
     container {
       name   = var.containerAppsName
-      image  = "${data.azurerm_container_registry.this_resource.login_server}/${var.containerAppsImage}"
-      cpu    = 1.0
-      memory = "2.0Gi"
-      volume_mounts {
-        name = var.containerAppsFolder[0]
-        path = "/${var.containerAppsFolder[0]}"
-      }
-      volume_mounts {
-        name = var.containerAppsFolder[1]
-        path = "/${var.containerAppsFolder[1]}"
+      image  = "${var.containerRegistry}/${var.containerAppsImage}"
+      cpu    = var.cpuCore
+      memory = "${var.memorySize}Gi"
+
+      dynamic "volume_mounts" {
+        for_each = azurerm_container_app_environment_storage.this_resource_share
+        content {
+          name = volume_mounts.value.share_name
+          path = "/${volume_mounts.value.share_name}"
+        }
       }
     }
     min_replicas = 1
     max_replicas = 3
-    volume {
-      name         = var.containerAppsFolder[0]
-      storage_name = azurerm_container_app_environment_storage.this_resource_share01.name
-      storage_type = "AzureFile"
-    }
-    volume {
-      name         = var.containerAppsFolder[1]
-      storage_name = azurerm_container_app_environment_storage.this_resource_share02.name
-      storage_type = "AzureFile"
+
+    dynamic "volume" {
+      for_each = azurerm_container_app_environment_storage.this_resource_share
+      content {
+        name         = volume.value.share_name
+        storage_name = volume.value.name
+        storage_type = "AzureFile"
+      }
     }
   }
 }

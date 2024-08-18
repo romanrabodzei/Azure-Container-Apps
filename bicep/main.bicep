@@ -4,7 +4,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -33,10 +33,8 @@ param containerAppsResourceGroupName string = 'az-${deploymentEnvironment}-capp-
 
 @description('Name of the Log Analytics workspace.')
 param logAnalyticsWorkspaceName string = 'az-${deploymentEnvironment}-capp-law'
-
 @description('Retention period for the Log Analytics workspace in days. 30 days is free.')
 param logAnalyticsWorkspaceRetentionInDays int = 30
-
 @description('Daily quota for the Log Analytics workspace in GB. -1 means that there is no cap on the data ingestion.')
 param logAnalyticsWorkspaceDailyQuotaGb int = -1
 
@@ -46,24 +44,14 @@ param userAssignedIdentityName string = 'az-${deploymentEnvironment}-capp-mi'
 @description('Name of the storage account.')
 param storageAccountName string = 'az${deploymentEnvironment}cappstg'
 
-@description('Name of the Azure Container Registry.')
-param containerRegistryName string = 'az${deploymentEnvironment}cappacr'
-
-@description('Name of the application, used for the deployment.')
-param applicationName string = 'transmission'
-param applicationImageToImport string = 'docker.io/romanrabodzei/${applicationName}:latest'
-@description('DockerHub username.')
-@secure()
-param DockerHubUserName string
-@description('DockerHub token.')
-@secure()
-param DockerHubToken string
-param applicationPort int = 8080
-param applicationFolders array = ['incompleted', 'completed']
+@description('Name of the application, dockerhub url, port and persistent volume, used for the deployment.')
+var applicationName = 'filebrowser'
+var applicationImageToPull = 'docker.io/hurlenko'
+var applicationPort = 8080
+var applicationFolders = ['data']
 
 @description('Name of the Azure Container Apps.')
 param containerAppsName string = 'az-${deploymentEnvironment}-capp'
-
 @description('Name of the Azure Container Apps managed environment.')
 param containerAppsManagedEnvironmentName string = 'az-${deploymentEnvironment}-capp-env'
 
@@ -71,16 +59,14 @@ param containerAppsManagedEnvironmentName string = 'az-${deploymentEnvironment}-
 param virtualNetworkName string = 'az-${deploymentEnvironment}-capp-vnet'
 var virtualNetworkAddressPrefix = '10.0.0.0/22'
 
-var privateEndpointSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'pe-subnet')
-var privateEndpointSubnetAddressPrefix = [for i in range(0, 4): cidrSubnet(virtualNetworkAddressPrefix, 24, i)]
-var privateEndpointSecurityGroupName = '${privateEndpointSubnetName}-nsg'
+// uncomment the following lines and lines in the code (121, 125, 129, 148) if you want to deploy a additional subnet.
+// var infrastructureSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'infra-subnet')
+// var infrastructureSubnetAddressPrefix = [for i in range(0, 4): cidrSubnet(virtualNetworkAddressPrefix, 24, i)]
+// var infrastructureSecurityGroupName = '${infrastructureSubnetName}-nsg'
 
 var containerAppsSubnetName = replace(containerAppsResourceGroupName, 'capp-rg', 'capp-subnet')
 var containerAppsSubnetAddressPrefix = [for i in range(0, 2): cidrSubnet(virtualNetworkAddressPrefix, 23, i)]
 var containerAppsSecurityGroupName = '${containerAppsSubnetName}-nsg'
-
-@description('Isolation from internet for the resources.')
-param networkIsolation bool = false
 
 /// tags
 param tagValue string = deploymentEnvironment
@@ -132,15 +118,15 @@ module network_module 'resources/virtualNetwork.bicep' = {
     virtualNetworkAddressPrefix: virtualNetworkAddressPrefix
     virtualSubnetNames: [
       containerAppsSubnetName
-      privateEndpointSubnetName
+      // infrastructureSubnetName
     ]
     virtualNetworkSubnetAddressPrefixes: [
       containerAppsSubnetAddressPrefix[1]
-      privateEndpointSubnetAddressPrefix[1]
+      // infrastructureSubnetAddressPrefix[1]
     ]
     networkSecurityGroupNames: [
       containerAppsSecurityGroupName
-      privateEndpointSecurityGroupName
+      // infrastructureSecurityGroupName
     ]
     logAnalyticsWorkspaceResourceGroupName: resourceGroup_resource.name
     logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
@@ -155,10 +141,12 @@ module storageAccount_module './resources/storageAccount.bicep' = {
     location: deploymentLocation
     storageAccountName: storageAccountName
     storageAccountFileShareName: applicationFolders
-    networkIsolation: networkIsolation
     virtualNetworkResourceGroupName: resourceGroup_resource.name
     virtualNetworkName: virtualNetworkName
-    virtualNetworkSubnetName: privateEndpointSubnetName
+    virtualNetworkSubnetNames: [
+      containerAppsSubnetName
+      // infrastructureSubnetName
+    ]
     userAssignedIdentityResourceGroupName: resourceGroup_resource.name
     userAssignedIdentityName: userAssignedIdentityName
     logAnalyticsWorkspaceResourceGroupName: resourceGroup_resource.name
@@ -168,32 +156,6 @@ module storageAccount_module './resources/storageAccount.bicep' = {
   dependsOn: [
     network_module
     managedIdentity_module
-  ]
-}
-
-module containerRegistry_module './resources/containerRegistry.bicep' = {
-  scope: resourceGroup_resource
-  name: toLower('containerRegistry-${deploymentDate}')
-  params: {
-    location: deploymentLocation
-    containerRegistryName: containerRegistryName
-    applicationName: applicationName
-    applicationImageToImport: applicationImageToImport
-    DockerHubUserName: base64(DockerHubUserName)
-    DockerHubToken: base64(DockerHubToken)
-    networkIsolation: networkIsolation
-    virtualNetworkResourceGroupName: resourceGroup_resource.name
-    virtualNetworkName: virtualNetworkName
-    virtualNetworkSubnetName: privateEndpointSubnetName
-    userAssignedIdentityResourceGroupName: resourceGroup_resource.name
-    userAssignedIdentityName: userAssignedIdentityName
-    logAnalyticsWorkspaceResourceGroupName: resourceGroup_resource.name
-    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
-    tags: tags
-  }
-  dependsOn: [
-    managedIdentity_module
-    network_module
   ]
 }
 
@@ -204,11 +166,10 @@ module containerApps_module './resources/containerApps.bicep' = {
     location: deploymentLocation
     containerAppsName: '${containerAppsName}-${applicationName}'
     containerAppsImage: '${applicationName}:latest'
+    containerRegistry: applicationImageToPull
     containerAppsPort: applicationPort
     containerAppsFolders: applicationFolders
     containerAppsManagedEnvironmentName: containerAppsManagedEnvironmentName
-    containerRegistryResourceGroupName: resourceGroup_resource.name
-    containerRegistryName: containerRegistryName
     virtualNetworkResourceGroupName: resourceGroup_resource.name
     virtualNetworkName: virtualNetworkName
     virtualNetworkSubnetName: containerAppsSubnetName
@@ -224,6 +185,5 @@ module containerApps_module './resources/containerApps.bicep' = {
     managedIdentity_module
     network_module
     storageAccount_module
-    containerRegistry_module
   ]
 }

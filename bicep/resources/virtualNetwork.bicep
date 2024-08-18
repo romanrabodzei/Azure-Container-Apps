@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 /// deployment scope
@@ -49,6 +49,14 @@ resource virtualNetwork_resource 'Microsoft.Network/virtualNetworks@2023-11-01' 
         networkSecurityGroup: {
           id: resourceId('Microsoft.Network/networkSecurityGroups', toLower(networkSecurityGroupNames[i]))
         }
+        serviceEndpoints: [
+          {
+            service: 'Microsoft.Storage'
+            locations: [
+              '*'
+            ]
+          }
+        ]
       }
     }
   ]
@@ -56,7 +64,7 @@ resource virtualNetwork_resource 'Microsoft.Network/virtualNetworks@2023-11-01' 
 
 var networkSecurityGroups = [
   'containerApps'
-  'privateEndpoints'
+  // 'infrastructure'
 ]
 
 var securityRules = {
@@ -79,7 +87,7 @@ var securityRules = {
       }
     }
   ]
-  privateEndpoints: []
+  // infrastructure: []
 }
 
 resource networkSecurityGroup_resource 'Microsoft.Network/networkSecurityGroups@2023-11-01' = [

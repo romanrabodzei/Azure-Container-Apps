@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 /// resource
@@ -30,6 +30,7 @@ resource "azurerm_subnet" "this_resource" {
   resource_group_name  = var.deploymentResourceGroupName
   virtual_network_name = var.virtualNetworkName
   address_prefixes     = [var.virtualNetworkSubnetAddressPrefixes[count.index]]
+  service_endpoints    = ["Microsoft.Storage"]
   depends_on           = [azurerm_virtual_network.this_resource]
 }
 

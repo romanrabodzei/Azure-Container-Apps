@@ -3,7 +3,7 @@
 #
 # .NOTES
 #     Author     : Roman Rabodzei
-#     Version    : 1.0.240710
+#     Version    : 1.0.240817
 #
 #             _
 #         .__(.)<  (MEOW)
@@ -52,5 +52,5 @@ jobs:
       # Run preflight validation of the Bicep templates
       - name: Preflight Validation
         run: |
-          az deployment sub validate --name $GITHUB_RUN_ID --location ${{ env.deploymentLocation}} --template-file ./main.bicep --parameters deploymentEnvironment=${{ env.deploymentEnvironment}} DockerHubUserName=${{ secrets.DOCKERHUB_USERNAME }} DockerHubToken=${{ secrets.DOCKERHUB_PASSWORD }}
+          az deployment sub validate --name $GITHUB_RUN_ID --location ${{ env.deploymentLocation}} --template-file ./main.bicep --parameters deploymentEnvironment=${{ env.deploymentEnvironment}}
         working-directory: bicep

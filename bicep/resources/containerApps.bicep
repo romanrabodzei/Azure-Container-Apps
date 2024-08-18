@@ -7,7 +7,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 /// deploymentScope
@@ -20,16 +20,21 @@ param containerAppsManagedEnvironmentName string
 param containerAppsName string
 param containerAppsImage string
 param containerAppsPort int
+param containerRegistry string
 param containerAppsFolders array
+
+@description('Number of CPU cores the container can use. Can be with a maximum of two decimals.')
+@allowed(['0.25', '0.5', '0.75', '1.0', '1.25', '1.5', '1.75', '2.0'])
+param cpuCore string = '1.0'
+
+@description('Amount of memory (in gibibytes, GiB) allocated to the container up to 4GiB. Can be with a maximum of two decimals. Ratio with CPU cores must be equal to 2.')
+@allowed(['0.5', '1.0', '1.5', '2.0', '3.0', '3.5', '4.0'])
+param memorySize string = '2.0'
 
 /// virtualNetworkParameters
 param virtualNetworkResourceGroupName string
 param virtualNetworkName string
 param virtualNetworkSubnetName string
-
-/// containerRegistryParameters
-param containerRegistryResourceGroupName string
-param containerRegistryName string
 
 /// storageAccountParameters
 param storageAccountResourceGroupName string
@@ -70,11 +75,6 @@ resource storageAccount_resource 'Microsoft.Storage/storageAccounts@2023-05-01' 
   name: storageAccountName
 }
 
-resource containerRegistry_resource 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
-  scope: resourceGroup(containerRegistryResourceGroupName)
-  name: toLower(containerRegistryName)
-}
-
 resource managedEnvironment_resource 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: toLower(containerAppsManagedEnvironmentName)
   location: location
@@ -113,28 +113,19 @@ resource managedEnvironment_resource 'Microsoft.App/managedEnvironments@2024-03-
       }
     }
   }
-  resource storage_share01 'storages' = {
-    name: '${storageAccount_resource.name}-${containerAppsFolders[0]}'
-    properties: {
-      azureFile: {
-        accountName: storageAccount_resource.name
-        accountKey: storageAccount_resource.listKeys().keys[0].value
-        shareName: containerAppsFolders[0]
-        accessMode: 'ReadWrite'
+  resource storage_share 'storages' = [
+    for (list, item) in containerAppsFolders: {
+      name: '${storageAccount_resource.name}-${containerAppsFolders[item]}'
+      properties: {
+        azureFile: {
+          accountName: storageAccount_resource.name
+          accountKey: storageAccount_resource.listKeys().keys[0].value
+          shareName: containerAppsFolders[item]
+          accessMode: 'ReadWrite'
+        }
       }
     }
-  }
-  resource storage_share_02 'storages' = {
-    name: '${storageAccount_resource.name}-${containerAppsFolders[1]}'
-    properties: {
-      azureFile: {
-        accountName: storageAccount_resource.name
-        accountKey: storageAccount_resource.listKeys().keys[0].value
-        shareName: containerAppsFolders[1]
-        accessMode: 'ReadWrite'
-      }
-    }
-  }
+  ]
 }
 
 resource containerApps_resource 'Microsoft.App/containerApps@2024-03-01' = {
@@ -162,33 +153,22 @@ resource containerApps_resource 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: containerAppsPort
         transport: 'Auto'
       }
-      registries: [
-        {
-          identity: managedIdentity_resource.id
-          server: containerRegistry_resource.properties.loginServer
-        }
-      ]
     }
     environmentId: managedEnvironment_resource.id
     template: {
       containers: [
         {
           name: toLower(containerAppsName)
-          image: toLower('${containerRegistry_resource.properties.loginServer}/${containerAppsImage}')
+          image: toLower('${containerRegistry}/${containerAppsImage}')
           resources: {
             #disable-next-line BCP036
-            cpu: '1.0'
-            memory: '2.0Gi'
+            cpu: cpuCore
+            memory: '${memorySize}Gi'
           }
           volumeMounts: [
-            {
-              volumeName: containerAppsFolders[0]
-              mountPath: '/${containerAppsFolders[0]}'
-            }
-
-            {
-              volumeName: containerAppsFolders[1]
-              mountPath: '/${containerAppsFolders[1]}'
+            for (list, item) in containerAppsFolders: {
+              volumeName: containerAppsFolders[item]
+              mountPath: '/${containerAppsFolders[item]}'
             }
           ]
         }
@@ -198,14 +178,9 @@ resource containerApps_resource 'Microsoft.App/containerApps@2024-03-01' = {
         maxReplicas: 3
       }
       volumes: [
-        {
-          name: containerAppsFolders[0]
-          storageName: '${storageAccount_resource.name}-${containerAppsFolders[0]}'
-          storageType: 'AzureFile'
-        }
-        {
-          name: containerAppsFolders[1]
-          storageName: '${storageAccount_resource.name}-${containerAppsFolders[1]}'
+        for (list, item) in containerAppsFolders: {
+          name: containerAppsFolders[item]
+          storageName: '${storageAccount_resource.name}-${containerAppsFolders[item]}'
           storageType: 'AzureFile'
         }
       ]

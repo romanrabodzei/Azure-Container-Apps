@@ -6,7 +6,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 /// deploymentScope
@@ -21,12 +21,9 @@ param storageAccountType string = 'Standard_RAGZRS'
 param storageAccountFileShareName array
 
 /// virtualNetworkParameters
-param networkIsolation bool = false
 param virtualNetworkResourceGroupName string = ''
 param virtualNetworkName string = ''
-param virtualNetworkSubnetName string = ''
-var fileSharePrivateDnsZoneName = 'privatelink_file_core_windows_net'
-var queuePrivateDnsZoneName = 'privatelink_queue_core_windows_net'
+param virtualNetworkSubnetNames array = []
 
 /// managedIdentityParameters
 param userAssignedIdentityResourceGroupName string
@@ -40,6 +37,25 @@ param logAnalyticsWorkspaceName string = ''
 param tags object = {}
 
 /// resources
+resource virtualNetwork_resource 'Microsoft.Network/virtualNetworks@2021-05-01' existing = if (!empty(virtualNetworkResourceGroupName) && !empty(virtualNetworkName) && !empty(virtualNetworkSubnetNames)) {
+  scope: resourceGroup(virtualNetworkResourceGroupName)
+  name: virtualNetworkName
+  resource subnet 'subnets' existing = [
+    for virtualNetworkSubnetName in virtualNetworkSubnetNames: {
+      name: virtualNetworkSubnetName
+    }
+  ]
+}
+
+var virtualNetworkRules = [
+  for (virtualNetworkSubnetName, item) in virtualNetworkSubnetNames: {
+    id: virtualNetwork_resource::subnet[item].id
+    action: 'Allow'
+  }
+]
+
+output virtualNetworkRules array = virtualNetworkRules
+
 resource storageAccount_resource 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: toLower(storageAccountName)
   location: location
@@ -54,23 +70,28 @@ resource storageAccount_resource 'Microsoft.Storage/storageAccounts@2023-05-01' 
     supportsHttpsTrafficOnly: true
     allowBlobPublicAccess: false
     allowSharedKeyAccess: true
-    publicNetworkAccess: networkIsolation ? 'Disabled' : 'Enabled'
+    publicNetworkAccess: 'Enabled'
     networkAcls: {
       bypass: 'AzureServices'
-      defaultAction: networkIsolation ? 'Deny' : 'Allow'
+      defaultAction: 'Deny'
+      virtualNetworkRules: !empty(virtualNetworkResourceGroupName) && !empty(virtualNetworkName) && !empty(virtualNetworkSubnetNames)
+        ? virtualNetworkRules
+        : []
     }
   }
   resource fileshare 'fileServices' = {
     name: 'default'
     properties: {}
-    resource default 'shares' = [for item in storageAccountFileShareName: {
-      name: item
-      properties: {
-        accessTier: 'Hot'
-        enabledProtocols: 'SMB'
-        shareQuota: 1024
+    resource default 'shares' = [
+      for item in storageAccountFileShareName: {
+        name: item
+        properties: {
+          accessTier: 'Hot'
+          enabledProtocols: 'SMB'
+          shareQuota: 1024
+        }
       }
-    }]
+    ]
   }
 }
 
@@ -110,128 +131,6 @@ resource StorageFileDataSMBShareContributor_roleAssignment_resource 'Microsoft.A
     principalType: 'ServicePrincipal'
     principalId: managedIdentity_resource.properties.principalId
     roleDefinitionId: StorageFileDataSMBShareContributor_roleDefinition_resource.id
-  }
-}
-
-resource virtualNetwork_resource 'Microsoft.Network/virtualNetworks@2023-11-01' existing = if (networkIsolation) {
-  scope: resourceGroup(virtualNetworkResourceGroupName)
-  name: virtualNetworkName
-  resource subnet 'subnets' existing = {
-    name: virtualNetworkSubnetName
-  }
-}
-
-resource fileSharePrivateDnsZone_resource 'Microsoft.Network/privateDnsZones@2020-06-01' = if (networkIsolation) {
-  name: toLower(replace(fileSharePrivateDnsZoneName, '_', '.'))
-  location: 'global'
-  tags: tags
-  properties: {}
-}
-
-resource fileSharePrivateDnsZone_networkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (networkIsolation) {
-  parent: fileSharePrivateDnsZone_resource
-  name: 'virtual-network-link'
-  location: 'global'
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork_resource.id
-    }
-    registrationEnabled: false
-  }
-}
-
-resource fileSharePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-06-01' = if (networkIsolation) {
-  name: toLower('${storageAccountName}-file-pe')
-  location: location
-  tags: tags
-  properties: {
-    customNetworkInterfaceName: toLower('${storageAccountName}-file-pe-nic')
-    subnet: {
-      id: virtualNetwork_resource::subnet.id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: toLower('${storageAccountName}-file-pe')
-        properties: {
-          privateLinkServiceId: storageAccount_resource.id
-          groupIds: [
-            'file'
-          ]
-        }
-      }
-    ]
-  }
-}
-
-resource fileSharePrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-06-01' = if (networkIsolation) {
-  parent: fileSharePrivateEndpoint
-  name: 'default'
-  properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: toLower(replace(fileSharePrivateDnsZoneName, '_', '-'))
-        properties: {
-          privateDnsZoneId: fileSharePrivateDnsZone_resource.id
-        }
-      }
-    ]
-  }
-}
-
-resource queuePrivateDnsZone_resource 'Microsoft.Network/privateDnsZones@2020-06-01' = if (networkIsolation) {
-  name: toLower(replace(queuePrivateDnsZoneName, '_', '.'))
-  location: 'global'
-  tags: tags
-  properties: {}
-}
-
-resource queuePrivateDnsZone_networkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = if (networkIsolation) {
-  parent: queuePrivateDnsZone_resource
-  name: 'virtual-network-link'
-  location: 'global'
-  properties: {
-    virtualNetwork: {
-      id: virtualNetwork_resource.id
-    }
-    registrationEnabled: false
-  }
-}
-
-resource queuePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-06-01' = if (networkIsolation) {
-  name: toLower('${storageAccountName}-queue-pe')
-  location: location
-  tags: tags
-  properties: {
-    customNetworkInterfaceName: toLower('${storageAccountName}-queue-pe-nic')
-    subnet: {
-      id: virtualNetwork_resource::subnet.id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: toLower('${storageAccountName}-queue-pe')
-        properties: {
-          privateLinkServiceId: storageAccount_resource.id
-          groupIds: [
-            'queue'
-          ]
-        }
-      }
-    ]
-  }
-}
-
-resource queuePrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-06-01' = if (networkIsolation) {
-  parent: queuePrivateEndpoint
-  name: 'default'
-  properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: toLower(replace(queuePrivateDnsZoneName, '_', '-'))
-        properties: {
-          privateDnsZoneId: queuePrivateDnsZone_resource.id
-        }
-      }
-    ]
   }
 }
 
