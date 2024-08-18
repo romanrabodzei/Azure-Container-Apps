@@ -53,11 +53,11 @@ resource "azurerm_container_app_environment" "this_resource" {
 }
 
 resource "azurerm_container_app_environment_storage" "this_resource_share" {
-  for_each                     = var.containerAppsFolder
-  name                         = "${var.storageAccountName}-${each.value}"
+  count                        = length(var.containerAppsFolder)
+  name                         = "${var.storageAccountName}-${var.containerAppsFolder[count.index]}"
   container_app_environment_id = azurerm_container_app_environment.this_resource.id
   account_name                 = var.storageAccountName
-  share_name                   = each.value
+  share_name                   = var.containerAppsFolder[count.index]
   access_key                   = data.azurerm_storage_account.this_resource.primary_access_key
   access_mode                  = "ReadWrite"
 }
