@@ -30,7 +30,6 @@ resource "azurerm_storage_account" "this_resource" {
   account_kind                  = var.storageAccountKind
   account_tier                  = "Standard"
   min_tls_version               = "TLS1_2"
-  enable_https_traffic_only     = true
   shared_access_key_enabled     = true
   public_network_access_enabled = true
   network_rules {

@@ -7,7 +7,7 @@
 
 .NOTES
     Author     : Roman Rabodzei
-    Version    : 1.0.240805
+    Version    : 1.0.240817
 */
 
 /// resource
@@ -53,7 +53,7 @@ resource "azurerm_container_app_environment" "this_resource" {
 }
 
 resource "azurerm_container_app_environment_storage" "this_resource_share" {
-  count                        = length(var.containerAppsFolder)
+  for_each                     = var.containerAppsFolder
   name                         = "${var.storageAccountName}-${each.value}"
   container_app_environment_id = azurerm_container_app_environment.this_resource.id
   account_name                 = var.storageAccountName
